@@ -265,7 +265,6 @@ const plansSection = plans.name
           ${plansCard(plans, { tag: "Included", featured: true })}
           ${(plans.addons || []).map((a) => plansCard(a, { tag: "Add-on", addon: true })).join("\n          ")}
         </div>
-        ${tourHosting ? `<p class="plans-tour"><span class="brand-mark" aria-hidden="true"></span><span>Want the walkthrough too? Keep the branded Realsee tour from the same scan for <strong>${money(tourHosting)}/mo</strong> hosting.</span></p>` : ""}
         ${plans.note ? `<p class="pricing-note">${esc(plans.note)}</p>` : ""}
         <p><a class="button" href="book.html?package=${encodeURIComponent(PLANS_PACKAGE)}">Book schematic plans</a></p>
       </div>
@@ -345,6 +344,7 @@ const builderSection = `<section class="section section-alt" id="builder" aria-l
           <span class="compare-tag">We'd suggest</span>
           <h3 data-builder-name></h3>
           <p class="builder-why" data-builder-why></p>
+          <table class="breakdown" data-builder-breakdown></table>
           <p class="builder-estimate" data-builder-estimate></p>
           <p><a class="button" href="book.html" data-builder-book>Book this</a></p>
         </div>
@@ -542,6 +542,7 @@ const book = page({
 
           <input type="hidden" name="Deliverables" value="" data-book-deliverables>
           <input type="hidden" name="Estimate" value="" data-book-estimate-field>
+          <input type="hidden" name="Price breakdown" value="" data-book-breakdown-field>
 
           <fieldset>
             <legend>Your job</legend>

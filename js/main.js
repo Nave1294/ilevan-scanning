@@ -33,30 +33,60 @@ const listJoin = (xs) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(
 const money = (n) => "$" + (Math.round(n * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
 const isPlans = (pkg) => !!pricing.plans && pkg === pricing.plans.name;
 
-// A package at a size, with schematic add-ons and the optional tour.
-// `changes` is the square footage of proposed changes, which prices any
-// add-on set to "per changes"; everything else goes by the building's size.
-// One-off cost and monthly hosting are kept apart; anything priced at 0 is
-// "quoted" and named rather than added.
+// A package at a size, with schematic add-ons and the optional tour, as
+// itemised lines. `changes` is the square footage of proposed changes, which
+// prices any add-on set to "per changes"; everything else goes by the
+// building's size. The totals are summed from the lines, so a breakdown and
+// its total can't disagree. Anything priced at 0 is "quoted": listed, not
+// added. A per-changes add-on with no area yet is "waiting": named, not
+// counted at its minimum.
+const sqftText = (n) => `${n.toLocaleString("en-US")} sq ft`;
+const rateText = (r) => `$${r.toFixed(2)}`;
+// One priced item: flat, or area × rate with its minimum.
+const priceLine = (label, x, area, areaLabel = "") => {
+  if (x.flat) return { label, detail: "Flat", amount: x.flat };
+  const raw = area * x.rate;
+  const detail = `${sqftText(area)}${areaLabel} × ${rateText(x.rate)}`;
+  return x.min && raw < x.min
+    ? { label, detail: `${detail} = ${money(raw)}, ${money(x.min)} minimum`, amount: x.min }
+    : { label, detail, amount: raw };
+};
+
 const quote = ({ pkg, sqft, changes = 0, addons = [], tour = false }) => {
+  const lines = [];
+  const quoted = [];
+  const waiting = [];
+  let hosting = 0;
+
   if (isPlans(pkg)) {
     const p = pricing.plans;
     const priced = (x) => x.flat || x.rate;
-    const area = (x) => (x.per === "changes" ? changes : sqft);
-    const cost = (x) => x.flat || Math.max(x.min || 0, x.rate * area(x));
-    const chosen = p.addons.filter((a) => addons.includes(a.name));
-    // A per-changes add-on with no area entered yet can't be priced; it's
-    // named as waiting rather than counted at its minimum.
-    const waiting = chosen.filter((a) => priced(a) && !a.flat && !area(a)).map((a) => a.name);
-    const counted = chosen.filter((a) => priced(a) && !waiting.includes(a.name));
-    const quoted = [...(priced(p) ? [] : ["the schematic plan"]), ...chosen.filter((a) => !priced(a)).map((a) => a.name)];
-    const once = (priced(p) ? cost(p) : 0) + counted.reduce((sum, a) => sum + cost(a), 0);
-    return { once, hosting: tour ? p.tourHosting : 0, quoted, waiting };
+    if (priced(p)) lines.push(priceLine(p.base, p, sqft));
+    else quoted.push("the schematic plan");
+    p.addons.filter((a) => addons.includes(a.name)).forEach((a) => {
+      const perChanges = a.per === "changes";
+      if (!priced(a)) quoted.push(a.name);
+      else if (perChanges && !a.flat && !changes) waiting.push(a.name);
+      else lines.push(priceLine(a.name, a, perChanges ? changes : sqft, perChanges ? " of changes" : ""));
+    });
+    if (tour) hosting = p.tourHosting;
+  } else {
+    const t = pricing.tiers.find((x) => x.name === pkg);
+    if (!t) return null;
+    if (t.flat) {
+      lines.push({ label: t.name, detail: t.upTo ? `Flat, up to ${sqftText(t.upTo)}` : "Flat", amount: t.flat });
+      const over = Math.max(0, sqft - t.upTo);
+      if (t.upTo && over && t.over) lines.push({ label: `Over ${sqftText(t.upTo)}`, detail: `${sqftText(over)} × ${rateText(t.over)}`, amount: over * t.over });
+    } else {
+      lines.push(priceLine(t.name, t, sqft));
+    }
+    hosting = t.hosting;
   }
-  const t = pricing.tiers.find((x) => x.name === pkg);
-  if (!t) return null;
-  const once = t.flat ? t.flat + Math.max(0, sqft - t.upTo) * t.over : Math.max(t.min, sqft * t.rate);
-  return { once, hosting: t.hosting, quoted: [], waiting: [] };
+
+  // The first invoice includes the first month of hosting.
+  if (hosting) lines.push({ label: "Tour hosting, first month", detail: "", amount: hosting });
+  const once = lines.reduce((sum, l) => sum + l.amount, 0) - hosting;
+  return { lines, once, hosting, quoted, waiting };
 };
 
 // "First" only when a monthly fee follows, and then the fee is named. The
@@ -89,6 +119,8 @@ const deliverables = ({ pkg, addons = [], changes = 0, tour = false }) => {
   if (!t) return [];
   return [...t.deliverables, ...(t.hosting ? [`Hosting (${money(t.hosting)}/mo)`] : [])];
 };
+
+const breakdownText = (q) => q.lines.map((l) => `${l.label}${l.detail ? ` (${l.detail})` : ""}: ${money(l.amount)}`).join("; ");
 
 // ---------- pricing cards ----------
 // Hidden without JavaScript, where the cards' own terms give the full price.
@@ -125,6 +157,7 @@ if (booking) {
   // Hidden fields, so the email carries the summary the visitor saw.
   const sentDeliverables = booking.querySelector("[data-book-deliverables]");
   const sentEstimate = booking.querySelector("[data-book-estimate-field]");
+  const sentBreakdown = booking.querySelector("[data-book-breakdown-field]");
   const subject = booking.querySelector('input[name="_subject"]');
   const addonsBox = booking.querySelector("[data-addons]");
   const addons = [...booking.querySelectorAll("[data-addon]")];
@@ -180,6 +213,7 @@ if (booking) {
 
     sentDeliverables.value = items.join("; ") || (pkg.value === "Not sure" ? "Not sure yet" : "");
     sentEstimate.value = q ? describe(q, "") : "";
+    sentBreakdown.value = q ? breakdownText(q) : "";
     // "New booking: Pro, 1,500 sq ft" reads at a glance in the inbox.
     subject.value = ["New booking", [pkg.value, sqft ? `${sqft.toLocaleString("en-US")} sq ft` : ""].filter(Boolean).join(", ")]
       .filter(Boolean)
@@ -255,7 +289,30 @@ if (builder) {
 
     result.querySelector("[data-builder-name]").textContent = rec.pkg;
     result.querySelector("[data-builder-why]").textContent = rec.why;
-    result.querySelector("[data-builder-estimate]").textContent = describe(quote({ ...rec, sqft }));
+    const q = quote({ ...rec, sqft });
+    const cell = (tag, text, cls) => Object.assign(document.createElement(tag), { textContent: text, className: cls || "" });
+    const rows = q.lines.map((l) => {
+      const tr = document.createElement("tr");
+      const what = cell("th", l.label);
+      what.scope = "row";
+      if (l.detail) what.append(cell("span", l.detail, "breakdown-detail"));
+      tr.append(what, cell("td", money(l.amount)));
+      return tr;
+    });
+    const total = document.createElement("tr");
+    total.className = "breakdown-total";
+    total.append(cell("th", q.hosting ? "First invoice" : "Invoice"), cell("td", money(q.once + q.hosting)));
+    total.firstChild.scope = "row";
+    result.querySelector("[data-builder-breakdown]").replaceChildren(...rows, total);
+    // Under the table, only what the table can't show: the monthly fee
+    // and anything quoted separately.
+    const after = [
+      ...(q.hosting ? [`Then ${money(q.hosting)}/mo hosting.`] : []),
+      ...(q.quoted.length ? [`Plus a quote for ${listJoin(q.quoted)}.`] : []),
+    ];
+    const note = result.querySelector("[data-builder-estimate]");
+    note.textContent = after.join(" ");
+    note.hidden = !after.length;
     const link = new URLSearchParams({ package: rec.pkg, sqft: String(sqft) });
     if (rec.addons?.length) link.set("addons", rec.addons.join("|"));
     if (rec.tour) link.set("tour", "1");
