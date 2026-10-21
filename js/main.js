@@ -234,6 +234,24 @@ if (booking) {
   const send = booking.querySelector("[data-book-send]");
   const wait = booking.querySelector("[data-book-wait]");
   const slowNote = booking.querySelector("[data-book-slow]");
+  const status = booking.querySelector("[data-book-status]");
+
+  // Done: the dot stops bouncing, settles back on its i and winks, then on
+  // to the thank-you page. If the browser can't animate, it just goes.
+  const wink = async () => {
+    const dot = wait.querySelector(".ilv-dot");
+    const stem = wait.querySelector(".ilv-stem");
+    if (!dot || !dot.animate) return;
+    const from = getComputedStyle(dot).transform;
+    dot.style.animation = stem.style.animation = "none";
+    await dot.animate([{ transform: from === "none" ? "none" : from }, { transform: "none" }], { duration: 260, easing: "ease-out" }).finished;
+    dot.style.transformOrigin = "50% 50%";
+    await dot.animate(
+      [{ transform: "none" }, { transform: "scale(1.08, 0.1)", offset: 0.4 }, { transform: "scale(1.08, 0.1)", offset: 0.55 }, { transform: "none" }],
+      { duration: 520, easing: "ease-in-out" }
+    ).finished;
+    await new Promise((r) => setTimeout(r, 180));
+  };
   const failed = booking.querySelector("[data-book-error]");
   const mailto = booking.querySelector("[data-book-mailto]");
   if (booking.dataset.ajax && window.fetch) {
@@ -247,6 +265,7 @@ if (booking) {
       // it answers, which can take a while, so after a moment say so too.
       wait.hidden = false;
       slowNote.hidden = true;
+      status.textContent = "Sending your request…";
       const slow = setTimeout(() => (slowNote.hidden = false), 3000);
       const data = new FormData(booking);
       let ok = false;
@@ -259,6 +278,12 @@ if (booking) {
       }
       clearTimeout(slow);
       if (ok) {
+        // Coming back with the Back button restores this page as it was
+        // left, mid-wink; reset it to a fresh form.
+        addEventListener("pageshow", (ev) => ev.persisted && location.reload(), { once: true });
+        slowNote.hidden = true;
+        status.textContent = "Sent!";
+        await wink().catch(() => {});
         location.href = booking.querySelector("[data-next]").value || "thanks.html";
         return;
       }

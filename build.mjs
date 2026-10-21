@@ -366,6 +366,13 @@ const builderSection = `<section class="section section-alt" id="builder" aria-l
       </div>
     </section>`;
 
+// The loader, inlined so the booking page can end its bounce with a wink.
+// The status text beside it says what's happening, so it's hidden from
+// screen readers here.
+const loaderSvg = readFileSync(join(ROOT, "assets/brand/loader.svg"), "utf8")
+  .replace(/<!--[\s\S]*?-->\s*/g, "")
+  .replace('role="img" aria-label="Loading"', 'class="loader" aria-hidden="true" focusable="false"');
+
 // The hero intro's first sentence, then the rest in a span phones hide.
 const ledeHtml = (() => {
   const intro = String(site.intro || "");
@@ -690,8 +697,8 @@ const book = page({
 
           <p><button class="button" type="submit" data-book-send>Send booking request</button></p>
           <div class="send-wait" role="status" hidden data-book-wait>
-            <img src="assets/brand/loader.svg" alt="" width="34" height="85">
-            <p><strong>Sending your request…</strong><span hidden data-book-slow> This can take up to a minute, so please keep this page open.</span></p>
+            ${loaderSvg}
+            <p><strong data-book-status>Sending your request…</strong><span hidden data-book-slow> This can take up to a minute, so please keep this page open.</span></p>
           </div>
           <div class="send-error" role="alert" hidden data-book-error>
             <p><strong>That didn't go through.</strong> The form service had a problem, so nothing was sent. Your answers are still here. Email them instead, or try again in a minute.</p>

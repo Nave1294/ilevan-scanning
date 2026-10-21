@@ -369,7 +369,7 @@ nav a:hover { color: var(--text); }
 /* While sending: the logo's dot bouncing on its i, beside the status. */
 .send-wait { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
 .send-wait[hidden] { display: none; }
-.send-wait img { flex: none; width: 34px; height: auto; }
+.send-wait .loader { flex: none; width: 34px; height: auto; }
 .send-wait p { margin: 0; font-size: 15px; color: var(--muted); }
 .send-wait strong { color: var(--text); font-weight: 600; }
 

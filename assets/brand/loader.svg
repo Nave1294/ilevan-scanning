@@ -2,15 +2,17 @@
   <!-- The Ilevan "il" mark as a loader: the dot of the i bounces on its
        stem like a ball, squashing on impact while the stem gives a little.
        Geometry traced from the logo (835 x 1752); the viewBox adds headroom
-       above for the bounce. -->
+       above for the bounce. Class and keyframe names are prefixed because
+       the booking page inlines this file, where they share the page's
+       namespace. -->
   <style>
-    .dot, .stem { transform-box: fill-box; transform-origin: 50% 100%; }
-    .dot { animation: bounce 1.1s infinite; }
-    .stem { animation: give 1.1s infinite; }
+    .ilv-dot, .ilv-stem { transform-box: fill-box; transform-origin: 50% 100%; }
+    .ilv-dot { animation: ilv-bounce 1.1s infinite; }
+    .ilv-stem { animation: ilv-give 1.1s infinite; }
 
     /* Apex, fall, squash on the stem, spring back up. At the squash the
        dot sits 84 lower, riding the stem's 7% dip (0.07 x 1196). */
-    @keyframes bounce {
+    @keyframes ilv-bounce {
       0%   { transform: translateY(-300px) scale(0.92, 1.1); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
       44%  { transform: translateY(243px) scale(0.9, 1.12); animation-timing-function: ease-out; }
       52%  { transform: translateY(327px) scale(1.32, 0.7); animation-timing-function: ease-in-out; }
@@ -18,7 +20,7 @@
       100% { transform: translateY(-300px) scale(0.92, 1.1); }
     }
     /* The stem dips as the dot lands, then recovers. */
-    @keyframes give {
+    @keyframes ilv-give {
       0%, 42%  { transform: scaleY(1); }
       52%      { transform: scaleY(0.93); animation-timing-function: cubic-bezier(0.3, 1.6, 0.5, 1); }
       70%, 100% { transform: scaleY(1); }
@@ -26,14 +28,14 @@
 
     /* Reduced motion: no bouncing, just a slow breath of the dot. */
     @media (prefers-reduced-motion: reduce) {
-      .dot { animation: breathe 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
-      .stem { animation: none; }
-      @keyframes breathe { 50% { opacity: 0.35; } }
+      .ilv-dot { animation: ilv-breathe 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
+      .ilv-stem { animation: none; }
+      @keyframes ilv-breathe { 50% { opacity: 0.35; } }
     }
   </style>
   <g fill="#111">
-    <rect class="stem" x="52" y="556" width="213" height="1196" rx="106.5"/>
+    <rect class="ilv-stem" x="52" y="556" width="213" height="1196" rx="106.5"/>
     <rect x="625" y="0" width="210" height="1748"/>
-    <circle class="dot" cx="155" cy="158" r="155"/>
+    <circle class="ilv-dot" cx="155" cy="158" r="155"/>
   </g>
 </svg>
