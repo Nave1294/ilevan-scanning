@@ -62,21 +62,36 @@ const mailto = email ? `mailto:${email}?subject=${encodeURIComponent("Scan enqui
 
 // A floor plan being scanned: the mark of the business, drawn rather than
 // photographed so the page looks finished before there is any work to show.
-const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focusable="false">
+// js/main.js brings it to life: the logo's eye goes room to room, sends out
+// dotted lines of sight, and each room's walls build in as it's scanned.
+// Each room's walls are revealed by a circle growing from the eye, clipped
+// to that room (with a little extra, so the walls on its edges come too).
+// Without JavaScript, or with reduced motion, the plan is simply complete.
+// Rooms are listed in the order the eye visits them.
+const PLAN_ROOMS = [
+  { x: 20, y: 20, w: 180, h: 180 },
+  { x: 200, y: 20, w: 130, h: 180 },
+  { x: 330, y: 20, w: 130, h: 180 },
+  { x: 300, y: 200, w: 160, h: 140 },
+  { x: 20, y: 200, w: 280, h: 140 },
+];
+const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focusable="false" data-plan data-rooms='${JSON.stringify(PLAN_ROOMS)}'>
+  <defs>
+    ${PLAN_ROOMS.map((r, i) => `<clipPath id="plan-room-${i}"><rect x="${r.x - 4}" y="${r.y - 4}" width="${r.w + 8}" height="${r.h + 8}"/></clipPath>`).join("\n    ")}
+    <mask id="plan-built" maskUnits="userSpaceOnUse" x="-10" y="-10" width="500" height="380">
+      ${PLAN_ROOMS.map((r, i) => `<g clip-path="url(#plan-room-${i})"><circle class="plan-reveal" cx="${r.x + r.w / 2}" cy="${r.y + r.h / 2}" r="0" fill="#fff"/></g>`).join("\n      ")}
+    </mask>
+  </defs>
   <g class="plan-walls">
     <path d="M20 20 H300 M330 20 H460 V200 M460 230 V340 H20 V20"/>
     <path d="M200 20 V110 M200 140 V200 M20 200 H90 M120 200 H300 V260 M300 290 V340 M300 200 H330 V20"/>
     <path d="M360 200 H460"/>
   </g>
-  <g class="plan-rays">
-    <path d="M250 270 L20 200 M250 270 L20 340 M250 270 L300 200 M250 270 L120 200 M250 270 L160 340"/>
+  <g class="plan-rays"></g>
+  <g class="plan-eye" transform="translate(380 270)">
+    <circle class="plan-eye-ball" r="10"/>
+    <circle class="plan-eye-pupil" r="3.6"/>
   </g>
-  <g class="plan-scan">
-    <circle cx="250" cy="270" r="30"/>
-    <circle cx="250" cy="270" r="62"/>
-    <circle cx="250" cy="270" r="96"/>
-  </g>
-  <circle class="plan-scanner" cx="250" cy="270" r="6"/>
 </svg>`;
 
 const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);

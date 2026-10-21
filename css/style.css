@@ -93,20 +93,11 @@ nav a:hover { color: var(--text); }
 
 .plan { width: 100%; height: auto; overflow: visible; }
 .plan-walls path { fill: none; stroke: var(--text); stroke-width: 6; stroke-linecap: square; }
-.plan-rays path { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 5; opacity: 0.7; }
-.plan-scan circle { fill: none; stroke: var(--accent); stroke-width: 1.5; }
-.plan-scanner { fill: var(--accent); }
+/* The eye's dotted lines of sight, and the eye itself: the logo's dot. */
+.plan-ray { stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 1.5 4.5; stroke-linecap: round; }
+.plan-eye-ball { fill: var(--text); }
+.plan-eye-pupil { fill: var(--bg); }
 
-@media (prefers-reduced-motion: no-preference) {
-  .plan-scan circle { transform-origin: 250px 270px; animation: ping 3.6s ease-out infinite; opacity: 0; }
-  .plan-scan circle:nth-child(2) { animation-delay: 1.2s; }
-  .plan-scan circle:nth-child(3) { animation-delay: 2.4s; }
-}
-@keyframes ping {
-  0% { transform: scale(0.3); opacity: 0; }
-  20% { opacity: 0.9; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
 
 /* ---------- sections ---------- */
 .section { padding: clamp(56px, 9vw, 104px) 0; border-top: 1px solid var(--border); }

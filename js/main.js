@@ -814,3 +814,114 @@ if (builder) {
   form.addEventListener("change", update);
   form.addEventListener("submit", (e) => e.preventDefault());
 }
+
+// ---------- hero: the eye scans and builds the floor plan ----------
+// The plan starts empty. The eye glides into each room, glances along
+// dotted lines of sight to its corners and walls, and the room's walls
+// build in, spreading out from the eye. With every room done it holds the
+// finished plan, blinks, clears it and starts over. Desktop only: phones
+// don't show the drawing. With reduced motion the plan stays complete.
+const plan = document.querySelector("[data-plan]");
+if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const NS = "http://www.w3.org/2000/svg";
+  const rooms = JSON.parse(plan.dataset.rooms).map((r) => ({
+    ...r,
+    cx: r.x + r.w / 2,
+    cy: r.y + r.h / 2,
+    // Corners and the middle of each wall: where it looks.
+    sights: [
+      [r.x, r.y], [r.x + r.w / 2, r.y], [r.x + r.w, r.y], [r.x + r.w, r.y + r.h / 2],
+      [r.x + r.w, r.y + r.h], [r.x + r.w / 2, r.y + r.h], [r.x, r.y + r.h], [r.x, r.y + r.h / 2],
+    ],
+    // Big enough to reach the room's far corners, walls included.
+    reach: Math.hypot(r.w, r.h) / 2 + 8,
+  }));
+  const walls = plan.querySelector(".plan-walls");
+  const rays = plan.querySelector(".plan-rays");
+  const eye = plan.querySelector(".plan-eye");
+  const pupil = plan.querySelector(".plan-eye-pupil");
+  const reveals = [...plan.querySelectorAll(".plan-reveal")];
+
+  const smooth = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const tween = (ms, fn, ease = smooth) =>
+    new Promise((done) => {
+      const t0 = performance.now();
+      const frame = (now) => {
+        const t = Math.min(1, (now - t0) / ms);
+        fn(ease(t));
+        t < 1 ? requestAnimationFrame(frame) : done();
+      };
+      requestAnimationFrame(frame);
+    });
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  let ex = rooms[0].cx, ey = rooms[0].cy, squint = 1;
+  const place = () => eye.setAttribute("transform", `translate(${ex} ${ey}) scale(1 ${squint})`);
+  // The pupil leans towards what it's looking at, never past the eye's rim.
+  const lookAt = (x, y) => {
+    const dx = x - ex, dy = y - ey, d = Math.hypot(dx, dy) || 1, k = Math.min(5.2, d) / d;
+    pupil.setAttribute("cx", (dx * k).toFixed(2));
+    pupil.setAttribute("cy", (dy * k).toFixed(2));
+  };
+
+  const glide = async (room) => {
+    const fx = ex, fy = ey;
+    lookAt(room.cx, room.cy);
+    await tween(Math.max(500, Math.hypot(room.cx - fx, room.cy - fy) * 5), (t) => {
+      ex = fx + (room.cx - fx) * t;
+      ey = fy + (room.cy - fy) * t;
+      place();
+    });
+  };
+
+  const scan = async (room, i) => {
+    // A line of sight to each corner and wall, one after another.
+    for (const [x, y] of room.sights) {
+      const line = document.createElementNS(NS, "line");
+      line.setAttribute("class", "plan-ray");
+      line.setAttribute("x1", ex);
+      line.setAttribute("y1", ey);
+      rays.append(line);
+      lookAt(x, y);
+      await tween(170, (t) => {
+        line.setAttribute("x2", ex + (x - ex) * t);
+        line.setAttribute("y2", ey + (y - ey) * t);
+      });
+    }
+    lookAt(ex, ey);
+    // The room builds in, spreading from the eye; the sight lines fade.
+    await tween(900, (t) => reveals[i].setAttribute("r", (room.reach * t).toFixed(1)));
+    await tween(350, (t) => (rays.style.opacity = 1 - t));
+    rays.replaceChildren();
+    rays.style.opacity = 1;
+  };
+
+  const blink = () => tween(320, (t) => { squint = 1 - 0.85 * Math.sin(Math.PI * t); place(); }, (t) => t);
+
+  const run = async () => {
+    walls.setAttribute("mask", "url(#plan-built)");
+    place();
+    for (;;) {
+      for (let i = 0; i < rooms.length; i++) {
+        await glide(rooms[i]);
+        await sleep(200);
+        await scan(rooms[i], i);
+        await sleep(250);
+      }
+      // All built: a look round the finished plan, a blink, and clear.
+      await sleep(1200);
+      await blink();
+      await sleep(1600);
+      await tween(700, (t) => reveals.forEach((r, i) => r.setAttribute("r", (rooms[i].reach * (1 - t)).toFixed(1))));
+      await sleep(500);
+    }
+  };
+
+  // Only once the drawing is actually on screen (desktop widths).
+  const wide = matchMedia("(min-width: 821px)");
+  let started = false;
+  const go = () => { if (!started && wide.matches) { started = true; run(); } };
+  go();
+  wide.addEventListener("change", go);
+}
+
