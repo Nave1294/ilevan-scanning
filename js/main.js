@@ -290,8 +290,8 @@ const character = (svg, { roam } = {}) => {
   // Set out once the eye first starts and the screen's width is known, in
   // the drawing's units. On the i's side: a basketball hoop hung on the i
   // and its ball, a crate, and a patch of ice with a fishing hole. On the
-  // l's side: a football and, at the far end, three bowling pins. Phones
-  // draw the logo small enough that all of it fits, packed a little closer. Footprints are x
+  // l's side: a football and, at the far end, three bowling pins. Short of
+  // room, it packs a little closer. Footprints are x
   // ranges; the eye's x offset is its left edge, so it overlaps something
   // when x + 310 > x0 and x < x1.
   const FLOOR = 1752;
@@ -1200,7 +1200,8 @@ const character = (svg, { roam } = {}) => {
       await eyeOpen();
       await blink(560);
       await eyeClose();
-      await sleep(100);
+      // A beat to enjoy the wink before moving on.
+      await sleep(900);
     },
   };
 };
@@ -1346,6 +1347,9 @@ if (booking) {
         slowNote.hidden = true;
         status.textContent = "Sent!";
         await loader?.finish().catch(() => {});
+        // The eye and message fade out, then the thanks page fades in.
+        wait.classList.add("is-leaving");
+        await new Promise((r) => setTimeout(r, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 450));
         location.href = booking.querySelector("[data-next]").value || "thanks.html";
         return;
       }
@@ -1466,14 +1470,16 @@ if (builder) {
 // The plan starts empty. The eye comes in through the front door and goes
 // room to room, only ever through doorways. In each room it glances along
 // dotted lines of sight to the corners and walls, and the room's walls build
-// in, spreading out from the eye. Then it moves in: furnishes the place and
-// measures two walls, and welcomes its family in at the front door: a partner
-// and two kids. Together they watch TV, cook (the kids play chase meanwhile),
-// eat dinner round the table and have a dance party. Then the kids get ready
-// for bed: a bath, teeth brushed, tucked in and read a story till they nod
-// off, and the parents go to bed too. In the morning the kids wake first and
-// pile onto the big bed, the parents wake up to them, and there they all
-// stay, awake and still. Once through, about three minutes, never repeated.
+// in, spreading out from the eye. Then it measures up a wall in each room,
+// furnishes the place, and, the measurements fading, welcomes its family in
+// at the front door: a partner and two kids. Together they watch TV, cook
+// (the kids play chase meanwhile), eat dinner round the table and have a
+// dance party. Then the kids get ready for bed: a bath, teeth brushed, tucked
+// in and read a story till they nod off, and the parents go to bed too.
+// Asleep, an eye stays round and its pupil closes. In the morning the kids
+// wake first and pile onto the big bed, the parents wake up to them, and
+// there they all stay, awake and still. Once through, a little over three
+// minutes, never repeated.
 // On phones it sits below the buttons and starts when scrolled to. With
 // reduced motion (or without JavaScript) the plan is shown finished and
 // furnished.
@@ -1588,9 +1594,17 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     blink(ms = 320) { return tween(ms, (t) => { this.squint = 1 - 0.85 * Math.sin(Math.PI * t); this.place(); }, linear); }
     // A happy hop on the spot.
     hop(height = 8, ms = 380) { return tween(ms, (t) => { this.bobY = -height * Math.sin(Math.PI * t); this.place(); }, linear); }
-    // Eyes closing for sleep, and opening again in the morning.
-    doze(ms = 1400) { return tween(ms, (t) => { this.squint = 1 - 0.85 * t; this.place(); }); }
-    wake(ms = 700) { return tween(ms, (t) => { this.squint = 0.15 + 0.85 * t; this.place(); }); }
+    // Asleep: the eye stays round and the pupil closes, shrinking to
+    // nothing; in the morning it opens again.
+    doze(ms = 1400) {
+      this.lookAhead();
+      const r = this.r * 0.36;
+      return tween(ms, (t) => this.pupil.setAttribute("r", (r * (1 - t)).toFixed(2)));
+    }
+    wake(ms = 700) {
+      const r = this.r * 0.36;
+      return tween(ms, (t) => this.pupil.setAttribute("r", (r * t).toFixed(2)));
+    }
   }
 
   const me = new Eye({ el: plan.querySelector(".plan-eye") });
@@ -1670,8 +1684,11 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     kidA = new Eye({ r: 6.5 });
     kidB = new Eye({ r: 6.5 });
     family = [partner, kidA, kidB];
-    // Step aside to let them in.
-    await me.glide(276, 300);
+    // Step aside to let them in, as the measurements fade: the house is a
+    // home now.
+    await all(me.glide(276, 300), tween(1200, (t) => (marks.style.opacity = (1 - t).toFixed(3))));
+    marks.replaceChildren();
+    marks.style.opacity = "";
     me.lookAt(...FRONT);
     const spots = [[232, 282], [206, 266], [258, 260]];
     for (let k = 0; k < family.length; k++) {
@@ -1969,6 +1986,19 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await me.blink();
     await sleep(700);
 
+    // Measuring up, a wall in each room big enough to take a dimension,
+    // from the bedroom, where the scan ends, round to the living room.
+    await measure([182, 30], [182, 190], "15′", [168, 114]);
+    await sleep(400);
+    await measure([212, 182], [318, 182], "10′", [265, 175]);
+    await sleep(400);
+    await measure([345, 32], [345, 188], "15′", [359, 114]);
+    await sleep(400);
+    await measure([450, 330], [310, 330], "13′", [340, 323]);
+    await sleep(400);
+    await measure([290, 266], [30, 266], "23′", [160, 260]);
+    await sleep(700);
+
     // Moving in: furniture, room by room, in the order it scanned them.
     // From the speaker, round under the TV to the dining room.
     const furnish = [
@@ -1982,14 +2012,6 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       await setDown(name);
       await sleep(350);
     }
-    // Measuring up. The second wall right to left, below the speaker, and
-    // reached by way of the room's left side, so the walk there stays clear
-    // of the speaker and the TV.
-    await measure([182, 30], [182, 190], "15′", [168, 114]);
-    await sleep(400);
-    await me.walkTo(110, 255);
-    await measure([290, 266], [30, 266], "23′", [160, 260]);
-    await sleep(600);
 
     // The family arrives, and the house fills up.
     await welcome();
@@ -2026,11 +2048,13 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 // there. It starts out too scared to leave the letters, works up the
 // courage to climb down, and from then on plays in the yard (basketball,
 // football, bowling, ice fishing) between moods, leaps and runs along the
-// ground, all within the page's text column. It starts when scrolled into
-// view.
+// ground, within the page's text column, or past a phone's edges. It starts
+// when scrolled into view.
 const mascot = document.querySelector(".mascot .loader");
 if (mascot && "IntersectionObserver" in window) {
   const VIEW = mascot.viewBox.baseVal;
+  // The yard a desktop column holds, in the drawing's units.
+  const YARD = { left: -3228, right: 3803 };
   // An offset of 0 puts the dot's left edge at x 0 and its right edge at
   // 310 (it's 310 across). Between these it stays 160 units inside the
   // column's edges, room for its squash and float.
@@ -2043,7 +2067,10 @@ if (mascot && "IntersectionObserver" in window) {
     const from = col.left + parseFloat(style.paddingLeft), to = col.right - parseFloat(style.paddingRight);
     const leftEdge = VIEW.x + (from - box.left) * perPx;
     const rightEdge = VIEW.x + (to - box.left) * perPx;
-    return { left: leftEdge + 160, right: rightEdge - 310 - 160 };
+    // Never less than a desktop column's worth of yard: on a phone held
+    // upright the far ends run off the screen's edges, and turned sideways
+    // the rest comes into view.
+    return { left: Math.min(leftEdge + 160, YARD.left), right: Math.max(rightEdge - 310 - 160, YARD.right) };
   };
   const life = character(mascot, { roam });
   new IntersectionObserver((entries, seen) => {

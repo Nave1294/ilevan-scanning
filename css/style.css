@@ -53,6 +53,23 @@ a { color: inherit; }
 }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; text-decoration: none; white-space: nowrap; }
+/* The header's mark: the logo's eye, floating a little, blinking now and
+   then, and glancing about. */
+.brand-eye { display: block; width: 20px; height: 20px; overflow: visible; animation: brand-float 3.2s ease-in-out infinite; }
+.brand-eye .brand-ball { fill: var(--text); transform-box: fill-box; transform-origin: 50% 50%; animation: brand-blink 6.5s infinite; }
+.brand-eye .brand-pupil { fill: var(--bg); animation: brand-glance 13s ease-in-out infinite; }
+@keyframes brand-float { 50% { transform: translateY(-2.5px); } }
+@keyframes brand-blink {
+  0%, 44%, 50%, 90%, 94.5%, 100% { transform: none; }
+  47% { transform: scale(1.08, 0.1); }
+  92% { transform: scale(1.08, 0.1); }
+}
+@keyframes brand-glance {
+  0%, 20%, 34%, 62%, 76%, 100% { transform: none; }
+  24%, 30% { transform: translate(-2.6px, 0.4px); }
+  66%, 72% { transform: translate(2.6px, -0.6px); }
+}
+@media (prefers-reduced-motion: reduce) { .brand-eye, .brand-eye * { animation: none !important; } }
 .brand-mark {
   width: 18px; height: 18px; border-radius: 50%;
   border: 2px solid var(--accent);
@@ -416,6 +433,12 @@ nav a:hover { color: var(--text); }
 .sending-note { margin: 0; font-size: 15px; color: var(--muted); }
 .sending-note[hidden] { display: none; }
 html.is-sending { overflow: hidden; }
+/* Sent: the eye and message fade away, and the thanks page fades in. */
+.sending-inner { transition: opacity 0.45s ease, transform 0.45s ease; }
+.sending-screen.is-leaving .sending-inner { opacity: 0; transform: translateY(-8px); }
+body:has(.thanks) { animation: page-in 0.6s ease both; }
+@keyframes page-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { body:has(.thanks) { animation: none; } }
 
 /* ---------- booking form: job summary ---------- */
 .job-summary { grid-column: 1 / -1; border: 1px solid var(--accent); box-shadow: inset 0 0 0 1px var(--accent); border-radius: var(--radius); padding: 18px 20px; }
@@ -482,9 +505,6 @@ html.is-sending { overflow: hidden; }
   .hero { padding: 36px 0 40px; }
   .hero-inner { display: block; }
   .lede-more { display: none; }
-  /* The strip's logo, small enough that the whole yard fits either side
-     of it, crate included: about a sixth of the column. */
-  .mascot .loader { width: min(110px, calc((100vw - 2 * var(--gutter)) / 6.5)); }
   /* The floor plan, under the buttons, the width of the column. */
   .hero-art { margin: 32px auto 0; max-width: 400px; }
   .eyebrow { font-size: 12px; margin-bottom: 14px; }

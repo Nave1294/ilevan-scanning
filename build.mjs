@@ -526,6 +526,10 @@ const packagesSection = `<section class="section m-only" id="packages" aria-labe
 // goes live.
 const siteUrl = String(site.siteUrl || "").trim().replace(/\/?$/, "/").replace(/^\/$/, "");
 
+// The header's mark: the logo's eye, a dot with its pupil, which floats,
+// blinks and glances about (css/style.css).
+const brandEye = `<svg class="brand-eye" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><g class="brand-ball"><circle cx="10" cy="10" r="9"/><circle class="brand-pupil" cx="10" cy="9.4" r="2.7"/></g></svg>`;
+
 const page = ({ title, desc = description, home = false, path = "", body }) => {
   const at = home ? "" : "index.html";
   return `<!doctype html>
@@ -553,7 +557,7 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
 <body>
   <header class="site-header">
     <div class="wrap header-inner">
-      <a class="brand" href="${home ? "#top" : "index.html"}"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
+      <a class="brand" href="${home ? "#top" : "index.html"}">${brandEye}${name}</a>
       <nav aria-label="Main">
         <a href="${at}#pricing">${pricingHeading}</a>
         ${plansSection ? `<a href="${at}#plans">${esc(plans.heading || PLANS_PACKAGE)}</a>` : ""}
