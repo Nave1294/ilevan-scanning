@@ -87,13 +87,17 @@
         "name": "Elevations & sections",
         "text": "Exterior elevations and building sections, drawn from the same scan.",
         "flat": 0,
-        "rate": 0.3
+        "rate": 0.3,
+        "per": "building",
+        "min": 0
       },
       {
         "name": "Proposed layout",
         "text": "A schematic plan of proposed changes, such as a new layout or an addition, to work out and price the job.",
         "flat": 0,
-        "rate": 0
+        "rate": 2,
+        "per": "changes",
+        "min": 350
       }
     ],
     "note": "Schematic plans are for planning and discussion. They are not construction documents and are not prepared by a licensed architect. Verify dimensions on site before building.",

@@ -242,6 +242,7 @@ nav a:hover { color: var(--text); }
 .booking fieldset { border: 0; margin: 0 0 32px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
 .booking legend { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); padding: 0; margin-bottom: 16px; }
 .field { display: grid; gap: 6px; }
+.field[hidden] { display: none; }
 .field:has(textarea), .field:has(select), .field:has(#address) { grid-column: 1 / -1; }
 .field label { font-size: 15px; font-weight: 550; }
 .req { color: var(--accent); }

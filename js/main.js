@@ -28,26 +28,35 @@ const pricing = (() => {
     return { tiers: [], plans: null };
   }
 })();
+// "a", "a and b", "a, b and c".
+const listJoin = (xs) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
 const money = (n) => "$" + (Math.round(n * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
 const isPlans = (pkg) => !!pricing.plans && pkg === pricing.plans.name;
 
 // A package at a size, with schematic add-ons and the optional tour.
+// `changes` is the square footage of proposed changes, which prices any
+// add-on set to "per changes"; everything else goes by the building's size.
 // One-off cost and monthly hosting are kept apart; anything priced at 0 is
 // "quoted" and named rather than added.
-const quote = ({ pkg, sqft, addons = [], tour = false }) => {
+const quote = ({ pkg, sqft, changes = 0, addons = [], tour = false }) => {
   if (isPlans(pkg)) {
     const p = pricing.plans;
     const priced = (x) => x.flat || x.rate;
-    const cost = (x) => x.flat || Math.max(x.min || 0, x.rate * sqft);
+    const area = (x) => (x.per === "changes" ? changes : sqft);
+    const cost = (x) => x.flat || Math.max(x.min || 0, x.rate * area(x));
     const chosen = p.addons.filter((a) => addons.includes(a.name));
+    // A per-changes add-on with no area entered yet can't be priced; it's
+    // named as waiting rather than counted at its minimum.
+    const waiting = chosen.filter((a) => priced(a) && !a.flat && !area(a)).map((a) => a.name);
+    const counted = chosen.filter((a) => priced(a) && !waiting.includes(a.name));
     const quoted = [...(priced(p) ? [] : ["the schematic plan"]), ...chosen.filter((a) => !priced(a)).map((a) => a.name)];
-    const once = (priced(p) ? cost(p) : 0) + chosen.filter(priced).reduce((sum, a) => sum + cost(a), 0);
-    return { once, hosting: tour ? p.tourHosting : 0, quoted };
+    const once = (priced(p) ? cost(p) : 0) + counted.reduce((sum, a) => sum + cost(a), 0);
+    return { once, hosting: tour ? p.tourHosting : 0, quoted, waiting };
   }
   const t = pricing.tiers.find((x) => x.name === pkg);
   if (!t) return null;
   const once = t.flat ? t.flat + Math.max(0, sqft - t.upTo) * t.over : Math.max(t.min, sqft * t.rate);
-  return { once, hosting: t.hosting, quoted: [] };
+  return { once, hosting: t.hosting, quoted: [], waiting: [] };
 };
 
 // "First" only when a monthly fee follows, and then the fee is named. The
@@ -58,7 +67,8 @@ const describe = (q, prefix = "Estimated ") => {
   const label = q.hosting ? `${prefix}first invoice` : `${prefix}invoice`;
   const quoted = q.quoted.length ? ` + quote for ${q.quoted.join(" and ")}` : "";
   const monthly = q.hosting ? ` + ${money(q.hosting)}/mo after first month` : "";
-  return `${label.charAt(0).toUpperCase() + label.slice(1)}: ${money(first)}${quoted}${monthly}`;
+  const waiting = q.waiting.length ? `, plus ${q.waiting.join(" and ").toLowerCase()} once you enter the square footage of proposed changes` : "";
+  return `${label.charAt(0).toUpperCase() + label.slice(1)}: ${money(first)}${quoted}${monthly}${waiting}`;
 };
 
 // ---------- pricing cards ----------
@@ -94,6 +104,8 @@ if (booking) {
   const addons = [...booking.querySelectorAll("[data-addon]")];
   const tour = booking.querySelector("[data-tour]");
   const extras = [...addons, ...(tour ? [tour] : [])];
+  const changesField = booking.querySelector("[data-changes-field]");
+  const changes = booking.querySelector("[data-book-changes]");
 
   // Arriving from a pricing card or the job builder:
   // ?package=Pro, plus &sqft=1500&addons=Elevations%20%26%20sections&tour=1.
@@ -104,6 +116,7 @@ if (booking) {
   const wantedAddons = (params.get("addons") || "").split("|");
   addons.forEach((a) => (a.checked = wantedAddons.includes(a.dataset.name)));
   if (tour) tour.checked = params.get("tour") === "1";
+  if (changes && Number(params.get("changes")) > 0) changes.value = Number(params.get("changes"));
 
   const update = () => {
     const plans = isPlans(pkg.value);
@@ -112,11 +125,21 @@ if (booking) {
     if (addonsBox) addonsBox.hidden = !plans;
     if (!plans) extras.forEach((x) => (x.checked = false));
 
+    // The changes area is asked for, and required, only while an add-on
+    // priced on it is ticked. Disabled when hidden, so it isn't sent empty.
+    if (changesField) {
+      const needed = addons.some((a) => a.checked && "perChanges" in a.dataset);
+      changesField.hidden = !needed;
+      changes.disabled = !needed;
+      changes.required = needed;
+    }
+
     const sqft = Number(size.value) || 0;
     const q = sqft > 0 ? quote({
       pkg: pkg.value,
       sqft,
       addons: addons.filter((a) => a.checked).map((a) => a.dataset.name),
+      changes: changes && !changes.disabled ? Number(changes.value) || 0 : 0,
       tour: !!tour?.checked,
     }) : null;
     line.hidden = !q;
@@ -125,6 +148,7 @@ if (booking) {
   extras.forEach((x) => x.addEventListener("change", update));
   pkg.addEventListener("change", update);
   size.addEventListener("input", update);
+  changes?.addEventListener("input", update);
   update();
 }
 
@@ -146,11 +170,16 @@ if (builder) {
     const purpose = val("purpose");
     if (purpose === "plans") {
       const addons = [...form.querySelectorAll("[data-builder-addon]:checked")].map((x) => x.value);
+      const changes = Number(form.querySelector("[data-builder-changes]")?.value) || 0;
       const tour = val("tour") === "yes";
-      const extras = [...addons.map((a) => a.toLowerCase()), ...(tour ? ["the branded Realsee tour"] : [])];
+      const perChanges = new Set(pricing.plans.addons.filter((a) => a.per === "changes").map((a) => a.name));
+      const extras = [
+        ...addons.map((a) => (perChanges.has(a) ? `a ${a.toLowerCase()} for ${changes.toLocaleString("en-US")} sq ft of changes` : a.toLowerCase())),
+        ...(tour ? ["the branded Realsee tour"] : []),
+      ];
       return {
-        pkg: pricing.plans.name, addons, tour,
-        why: `A schematic plan of every level as it stands${extras.length ? `, with ${extras.join(" and ")}` : ""}.`,
+        pkg: pricing.plans.name, addons, tour, changes,
+        why: `A schematic plan of every level as it stands${extras.length ? `, with ${listJoin(extras)}` : ""}.`,
       };
     }
     if (val("kind") === "commercial")
@@ -171,9 +200,14 @@ if (builder) {
       purpose === "plans" ? !pricing.plans.tourHosting || !!val("tour")
       : purpose === "listing" && (val("kind") === "commercial" || (val("kind") === "home" && !!val("where")));
     show("size", answered);
+    // A second size, for the proposed changes, only when an add-on priced
+    // on it is ticked; the result waits until it's filled in.
+    const needsChanges = purpose === "plans" && !!form.querySelector("[data-builder-addon][data-per-changes]:checked");
+    show("changes", answered && needsChanges);
+    const changes = Number(form.querySelector("[data-builder-changes]")?.value) || 0;
 
     const sqft = Number(form.querySelector("[data-builder-sqft]").value) || 0;
-    const rec = answered && sqft > 0 ? recommend() : null;
+    const rec = answered && sqft > 0 && (!needsChanges || changes > 0) ? recommend() : null;
     result.hidden = !rec;
     if (!rec) return;
 
@@ -183,6 +217,7 @@ if (builder) {
     const link = new URLSearchParams({ package: rec.pkg, sqft: String(sqft) });
     if (rec.addons?.length) link.set("addons", rec.addons.join("|"));
     if (rec.tour) link.set("tour", "1");
+    if (needsChanges) link.set("changes", String(changes));
     const book = result.querySelector("[data-builder-book]");
     book.href = `book.html?${link}`;
     book.textContent = `Book ${rec.pkg}`;

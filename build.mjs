@@ -237,7 +237,9 @@ const PLANS_PACKAGE = "Schematic plans";
 const priceLabel = (p, prefix = "") => {
   const flat = num(p.flat), rate = num(p.rate), min = num(p.min);
   if (flat) return { main: `${prefix}${money(flat)}`, unit: "flat", terms: "" };
-  if (rate) return { main: `${prefix}${money(rate)}`, unit: "/sq ft", terms: min ? `${money(min)} minimum` : "" };
+  const unit = p.per === "changes" ? "/sq ft of proposed changes" : "/sq ft";
+  // Rates always show cents ($2.00, not $2), like the other per-sq-ft prices.
+  if (rate) return { main: `${prefix}$${rate.toFixed(2)}`, unit, terms: min ? `${money(min)} minimum` : "" };
   return { main: "Quoted", unit: "", terms: "Priced after we see the property" };
 };
 const plansCard = (p, { tag, addon = false, featured = false }) => {
@@ -282,7 +284,10 @@ const pricing = {
   plans: plans.name
     ? {
         name: PLANS_PACKAGE, flat: num(plans.flat), rate: num(plans.rate), min: num(plans.min), tourHosting,
-        addons: (plans.addons || []).map((a) => ({ name: String(a.name || ""), flat: num(a.flat), rate: num(a.rate) })),
+        addons: (plans.addons || []).map((a) => ({
+          name: String(a.name || ""), flat: num(a.flat), rate: num(a.rate), min: num(a.min),
+          per: a.per === "changes" ? "changes" : "building",
+        })),
       }
     : null,
 };
@@ -290,7 +295,8 @@ const pricingScript = `<script type="application/json" id="pricing">${JSON.strin
 
 const choice = (name, value, label, extra = "") =>
   `<label class="chip"><input type="radio" name="${name}" value="${value}"${extra}><span>${label}</span></label>`;
-const tick = (name, label) => `<label class="chip"><input type="checkbox" data-builder-addon value="${esc(name)}"><span>${label}</span></label>`;
+const tick = (a) =>
+  `<label class="chip"><input type="checkbox" data-builder-addon value="${esc(a.name)}"${a.per === "changes" ? " data-per-changes" : ""}><span>${esc(a.name)}</span></label>`;
 
 const builderSection = `<section class="section" id="builder" aria-labelledby="builder-heading" hidden data-builder>
       <div class="wrap builder">
@@ -317,7 +323,7 @@ const builderSection = `<section class="section" id="builder" aria-labelledby="b
           </fieldset>
           <fieldset class="q" data-show="plans" hidden>
             <legend>Add to the schematic plan? <span class="hint">A schematic plan of every level is included. Pick any extras, or none.</span></legend>
-            ${(plans.addons || []).map((a) => tick(a.name, esc(a.name))).join("\n            ")}
+            ${(plans.addons || []).map(tick).join("\n            ")}
           </fieldset>
           ${tourHosting ? `<fieldset class="q" data-show="plans" hidden>
             <legend>Keep a walkthrough of the property?</legend>
@@ -325,8 +331,12 @@ const builderSection = `<section class="section" id="builder" aria-labelledby="b
             ${choice("tour", "no", "No, just the schematic plan")}
           </fieldset>` : ""}
           <fieldset class="q" data-show="size" hidden>
-            <legend><label for="builder-sqft">Square footage</label></legend>
+            <legend><label for="builder-sqft">Square footage of the building</label></legend>
             <input id="builder-sqft" type="number" inputmode="numeric" min="100" step="50" placeholder="e.g. 1500" data-builder-sqft>
+          </fieldset>
+          <fieldset class="q" data-show="changes" hidden>
+            <legend><label for="builder-changes">Square footage of proposed changes</label> <span class="hint">The area you're reworking or adding, e.g. a 300 sq ft kitchen and dining room.</span></legend>
+            <input id="builder-changes" type="number" inputmode="numeric" min="1" step="10" placeholder="e.g. 300" data-builder-changes>
           </fieldset>
         </form>
         <div class="builder-result" aria-live="polite" data-builder-result hidden>
@@ -523,11 +533,16 @@ const book = page({
               <span class="addons-label">Add-ons</span>
               ${plans.addons
                 .map(
-                  (a, i) => `<label class="check"><input type="checkbox" name="Add-on: ${esc(a.name)}" value="Yes" data-addon data-name="${esc(a.name)}"> ${esc(a.name)}</label>`
+                  (a) => `<label class="check"><input type="checkbox" name="Add-on: ${esc(a.name)}" value="Yes" data-addon data-name="${esc(a.name)}"${a.per === "changes" ? " data-per-changes" : ""}> ${esc(a.name)}</label>`
                 )
                 .join("\n              ")}
               ${tourHosting ? `<label class="check"><input type="checkbox" name="Add-on: Branded Realsee tour" value="Yes, ${money(tourHosting)}/mo hosting" data-tour> Branded Realsee tour from the same scan (+${money(tourHosting)}/mo hosting)</label>` : ""}
             </div>` : ""}
+            <div class="field" hidden data-changes-field>
+              <label for="changes">Square footage of proposed changes ${req}</label>
+              <input id="changes" name="Proposed changes (sq ft)" type="number" inputmode="numeric" min="1" step="1" data-book-changes disabled>
+              <p class="hint">The area you're reworking or adding.</p>
+            </div>
             <p class="estimate-line" hidden data-book-estimate></p>
           </fieldset>
 
