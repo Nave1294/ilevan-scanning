@@ -150,6 +150,7 @@ content:
               - { name: text, label: Description, type: text }
               - { name: flat, label: Flat price ($), type: number }
               - { name: rate, label: Per sq ft ($), type: number }
+          - { name: tourHosting, label: Branded tour hosting ($/mo), type: number, description: "Schematic plan clients can keep the branded Realsee tour from the same scan for this monthly fee. 0 hides the option." }
           - { name: note, label: Note under the section, type: text }
       - name: steps
         label: How it works

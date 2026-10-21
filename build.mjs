@@ -85,13 +85,6 @@ const sqft = (n) => n.toLocaleString("en-US") + " sq ft";
 
 // Prices are stored as numbers, not prose, so the card text and the
 // estimator are worked out from the same figures and can never disagree.
-// The figures the estimator needs, as data attributes, for the pricing cards
-// and the booking form's package options alike.
-const tierData = (t) =>
-  [["flat", t.flat], ["up-to", t.flatUpTo], ["over", t.overRate], ["rate", t.rate], ["min", t.min], ["hosting", t.hosting]]
-    .map(([k, v]) => `data-${k}="${num(v)}"`)
-    .join(" ");
-
 const tiers = (site.tiers || [])
   .map((t) => {
     const flat = num(t.flat), upTo = num(t.flatUpTo), over = num(t.overRate);
@@ -103,7 +96,7 @@ const tiers = (site.tiers || [])
       ? [upTo ? `Up to ${sqft(upTo)}` : "", over ? `then ${money(over)}/sq ft` : ""].filter(Boolean).join(", ")
       : min ? `${money(min)} minimum` : "";
     const host = hosting ? `+ ${money(hosting)}/mo hosting` : t.hostingNote || "";
-    return `<li class="tier${t.featured ? " tier-featured" : ""}" ${tierData(t)}>
+    return `<li class="tier${t.featured ? " tier-featured" : ""}">
         <h3>${esc(t.name)}</h3>
         <p class="tier-includes">${esc(t.includes)}</p>
         <p class="tier-price">${price}</p>
@@ -239,6 +232,7 @@ const compareSection = compareOptions
 // Schematic plans: a base drawing set plus optional add-ons. Each is priced
 // flat, per square foot (with a minimum), or left at 0 to read "Quoted".
 const plans = site.plans || {};
+const tourHosting = num(plans.tourHosting);
 const PLANS_PACKAGE = "Schematic plans";
 const priceLabel = (p, prefix = "") => {
   const flat = num(p.flat), rate = num(p.rate), min = num(p.min);
@@ -269,11 +263,81 @@ const plansSection = plans.name
           ${plansCard(plans, { tag: "Included", featured: true })}
           ${(plans.addons || []).map((a) => plansCard(a, { tag: "Add-on", addon: true })).join("\n          ")}
         </div>
+        ${tourHosting ? `<p class="plans-tour"><span class="brand-mark" aria-hidden="true"></span><span>Want the walkthrough too? Keep the branded Realsee tour from the same scan for <strong>${money(tourHosting)}/mo</strong> hosting.</span></p>` : ""}
         ${plans.note ? `<p class="pricing-note">${esc(plans.note)}</p>` : ""}
         <p><a class="button" href="book.html?package=${encodeURIComponent(PLANS_PACKAGE)}">Book schematic plans</a></p>
       </div>
     </section>`
   : "";
+
+// Every price the site's calculators use, in one place: the pricing cards'
+// estimator, the booking form and the job builder all read this, so no two
+// of them can quote differently. "<" is escaped so content can't close the
+// script tag early.
+const pricing = {
+  tiers: (site.tiers || []).map((t) => ({
+    name: String(t.name || ""), flat: num(t.flat), upTo: num(t.flatUpTo), over: num(t.overRate),
+    rate: num(t.rate), min: num(t.min), hosting: num(t.hosting),
+  })),
+  plans: plans.name
+    ? {
+        name: PLANS_PACKAGE, flat: num(plans.flat), rate: num(plans.rate), min: num(plans.min), tourHosting,
+        addons: (plans.addons || []).map((a) => ({ name: String(a.name || ""), flat: num(a.flat), rate: num(a.rate) })),
+      }
+    : null,
+};
+const pricingScript = `<script type="application/json" id="pricing">${JSON.stringify(pricing).replace(/</g, "\\u003c")}</script>`;
+
+const choice = (name, value, label, extra = "") =>
+  `<label class="chip"><input type="radio" name="${name}" value="${value}"${extra}><span>${label}</span></label>`;
+const tick = (name, label) => `<label class="chip"><input type="checkbox" data-builder-addon value="${esc(name)}"><span>${label}</span></label>`;
+
+const builderSection = `<section class="section" id="builder" aria-labelledby="builder-heading" hidden data-builder>
+      <div class="wrap builder">
+        <div class="section-head section-head-stack">
+          <h2 id="builder-heading">Build your job</h2>
+          <p>Answer a few questions and we'll suggest a package and an estimate.</p>
+        </div>
+        <form class="builder-form" data-builder-form>
+          <fieldset class="q">
+            <legend>What's the scan for?</legend>
+            ${choice("purpose", "listing", "Marketing a listing")}
+            ${plans.name ? choice("purpose", "plans", "A renovation or addition") : ""}
+          </fieldset>
+          <fieldset class="q" data-show="listing" hidden>
+            <legend>What kind of property?</legend>
+            ${choice("kind", "home", "Home")}
+            ${choice("kind", "commercial", "Commercial or mixed-use")}
+          </fieldset>
+          <fieldset class="q" data-show="home" hidden>
+            <legend>Where will the tour be seen?</legend>
+            ${choice("where", "zillow", "On Zillow")}
+            ${choice("where", "own", "My website, social and email")}
+            ${choice("where", "both", "Both")}
+          </fieldset>
+          <fieldset class="q" data-show="plans" hidden>
+            <legend>Add to the schematic plan? <span class="hint">A schematic plan of every level is included. Pick any extras, or none.</span></legend>
+            ${(plans.addons || []).map((a) => tick(a.name, esc(a.name))).join("\n            ")}
+          </fieldset>
+          ${tourHosting ? `<fieldset class="q" data-show="plans" hidden>
+            <legend>Keep a walkthrough of the property?</legend>
+            ${choice("tour", "yes", `Yes, the branded Realsee tour (+${money(tourHosting)}/mo)`)}
+            ${choice("tour", "no", "No, just the schematic plan")}
+          </fieldset>` : ""}
+          <fieldset class="q" data-show="size" hidden>
+            <legend><label for="builder-sqft">Square footage</label></legend>
+            <input id="builder-sqft" type="number" inputmode="numeric" min="100" step="50" placeholder="e.g. 1500" data-builder-sqft>
+          </fieldset>
+        </form>
+        <div class="builder-result" aria-live="polite" data-builder-result hidden>
+          <span class="compare-tag">We'd suggest</span>
+          <h3 data-builder-name></h3>
+          <p class="builder-why" data-builder-why></p>
+          <p class="builder-estimate" data-builder-estimate></p>
+          <p><a class="button" href="book.html" data-builder-book>Book this</a></p>
+        </div>
+      </div>
+    </section>`;
 
 /* ---------- shared frame ----------
    On the home page the nav jumps within the page; elsewhere it links back to
@@ -304,6 +368,7 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
   <meta name="twitter:card" content="summary_large_image">` : ""}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23fff'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23fff' stroke-width='2' opacity='.5'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css?v=${version("css/style.css")}">
+  ${pricingScript}
   <script defer src="js/main.js?v=${version("js/main.js")}"></script>
 </head>
 <body>
@@ -341,7 +406,7 @@ const home = page({
           ${site.eyebrow ? `<p class="eyebrow">${esc(site.eyebrow)}</p>` : ""}
           <h1>${esc(site.tagline)}</h1>
           <p class="lede">${esc(site.intro)}</p>
-          <p><a class="button" href="book.html">${bookLabel}</a></p>
+          <p class="hero-actions"><a class="button" href="book.html">${bookLabel}</a> <a class="text-link" href="#builder" data-builder-link hidden>Help me choose</a></p>
         </div>
         <div class="hero-art">${planSvg}</div>
       </div>
@@ -367,6 +432,8 @@ const home = page({
     ${compareSection}
 
     ${plansSection}
+
+    ${builderSection}
 
     <section class="section section-alt" aria-labelledby="process-heading">
       <div class="wrap">
@@ -402,7 +469,7 @@ const home = page({
    address an activation link instead; nothing is delivered until it's clicked.
    Fields starting with _ are FormSubmit settings, not questions. */
 const tierOptions = (site.tiers || [])
-  .map((t) => `<option value="${esc(t.name)}" ${tierData(t)}>${esc(t.name)}: ${esc(t.includes)}</option>`)
+  .map((t) => `<option value="${esc(t.name)}">${esc(t.name)}: ${esc(t.includes)}</option>`)
   .join("\n                ");
 
 const field = (id, label, input, hint = "") =>
@@ -449,16 +516,17 @@ const book = page({
             ${field("package", `Package ${req}`, `<select id="package" name="Package" required data-book-package>
                 <option value="">Choose a package</option>
                 ${tierOptions}
-                ${plans.name ? `<option value="${PLANS_PACKAGE}" data-plans data-flat="${num(plans.flat)}" data-up-to="0" data-over="0" data-rate="${num(plans.rate)}" data-min="${num(plans.min)}" data-hosting="0">${PLANS_PACKAGE}: ${esc(plans.includes)}</option>` : ""}
+                ${plans.name ? `<option value="${PLANS_PACKAGE}">${PLANS_PACKAGE}: ${esc(plans.includes)}</option>` : ""}
                 <option value="Not sure">Not sure yet</option>
               </select>`)}
-            ${(plans.addons || []).length ? `<div class="field addons" hidden data-addons>
+            ${(plans.addons || []).length || tourHosting ? `<div class="field addons" hidden data-addons>
               <span class="addons-label">Add-ons</span>
               ${plans.addons
                 .map(
-                  (a, i) => `<label class="check"><input type="checkbox" name="Add-on: ${esc(a.name)}" value="Yes" data-addon data-name="${esc(a.name)}" data-flat="${num(a.flat)}" data-rate="${num(a.rate)}"> ${esc(a.name)}</label>`
+                  (a, i) => `<label class="check"><input type="checkbox" name="Add-on: ${esc(a.name)}" value="Yes" data-addon data-name="${esc(a.name)}"> ${esc(a.name)}</label>`
                 )
                 .join("\n              ")}
+              ${tourHosting ? `<label class="check"><input type="checkbox" name="Add-on: Branded Realsee tour" value="Yes, ${money(tourHosting)}/mo hosting" data-tour> Branded Realsee tour from the same scan (+${money(tourHosting)}/mo hosting)</label>` : ""}
             </div>` : ""}
             <p class="estimate-line" hidden data-book-estimate></p>
           </fieldset>

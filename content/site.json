@@ -96,7 +96,8 @@
         "rate": 0
       }
     ],
-    "note": "Schematic plans are for planning and discussion. They are not construction documents and are not prepared by a licensed architect. Verify dimensions on site before building."
+    "note": "Schematic plans are for planning and discussion. They are not construction documents and are not prepared by a licensed architect. Verify dimensions on site before building.",
+    "tourHosting": 10
   },
   "steps": [
     {

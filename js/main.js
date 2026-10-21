@@ -18,23 +18,60 @@ document.querySelectorAll("[data-open]").forEach((card) => {
   });
 });
 
-// First invoice for one tier at a given size, from the figures the build
-// writes onto each pricing card and package option.
-const estimate = (el, size) => {
-  const d = Object.fromEntries(Object.entries(el.dataset).map(([k, v]) => [k, Number(v) || 0]));
-  const job = d.flat ? d.flat + Math.max(0, size - d.upTo) * d.over : Math.max(d.min, size * d.rate);
-  return job + d.hosting;
-};
+// ---------- pricing ----------
+// The build writes every price into one JSON block. All three calculators
+// (pricing cards, booking form, job builder) quote through quote() below.
+const pricing = (() => {
+  try {
+    return JSON.parse(document.getElementById("pricing").textContent);
+  } catch {
+    return { tiers: [], plans: null };
+  }
+})();
 const money = (n) => "$" + (Math.round(n * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
+const isPlans = (pkg) => !!pricing.plans && pkg === pricing.plans.name;
 
-// Pricing estimator. Hidden without JavaScript, where the cards' own terms
-// still give the full price.
+// A package at a size, with schematic add-ons and the optional tour.
+// One-off cost and monthly hosting are kept apart; anything priced at 0 is
+// "quoted" and named rather than added.
+const quote = ({ pkg, sqft, addons = [], tour = false }) => {
+  if (isPlans(pkg)) {
+    const p = pricing.plans;
+    const priced = (x) => x.flat || x.rate;
+    const cost = (x) => x.flat || Math.max(x.min || 0, x.rate * sqft);
+    const chosen = p.addons.filter((a) => addons.includes(a.name));
+    const quoted = [...(priced(p) ? [] : ["the schematic plan"]), ...chosen.filter((a) => !priced(a)).map((a) => a.name)];
+    const once = (priced(p) ? cost(p) : 0) + chosen.filter(priced).reduce((sum, a) => sum + cost(a), 0);
+    return { once, hosting: tour ? p.tourHosting : 0, quoted };
+  }
+  const t = pricing.tiers.find((x) => x.name === pkg);
+  if (!t) return null;
+  const once = t.flat ? t.flat + Math.max(0, sqft - t.upTo) * t.over : Math.max(t.min, sqft * t.rate);
+  return { once, hosting: t.hosting, quoted: [] };
+};
+
+// "First" only when a monthly fee follows, and then the fee is named. The
+// first invoice includes the first month of hosting.
+const describe = (q, prefix = "Estimated ") => {
+  if (!q.once && q.quoted.length) return "Priced by quote once we've seen the property.";
+  const first = q.once + q.hosting;
+  const label = q.hosting ? `${prefix}first invoice` : `${prefix}invoice`;
+  const quoted = q.quoted.length ? ` + quote for ${q.quoted.join(" and ")}` : "";
+  const monthly = q.hosting ? ` + ${money(q.hosting)}/mo after first month` : "";
+  return `${label.charAt(0).toUpperCase() + label.slice(1)}: ${money(first)}${quoted}${monthly}`;
+};
+
+// ---------- pricing cards ----------
+// Hidden without JavaScript, where the cards' own terms give the full price.
 const sqftInput = document.querySelector("[data-sqft]");
 if (sqftInput) {
   const tiers = document.querySelectorAll(".tier");
   const update = () => {
-    const size = Math.max(0, Number(sqftInput.value) || 0);
-    tiers.forEach((tier) => (tier.querySelector("[data-estimate]").textContent = money(estimate(tier, size))));
+    const sqft = Math.max(0, Number(sqftInput.value) || 0);
+    tiers.forEach((tier) => {
+      const q = quote({ pkg: tier.querySelector("h3").textContent, sqft });
+      if (q) tier.querySelector("[data-estimate]").textContent = money(q.once + q.hosting);
+    });
   };
   sqftInput.closest(".estimator").hidden = false;
   tiers.forEach((tier) => (tier.querySelector(".tier-estimate").hidden = false));
@@ -42,7 +79,7 @@ if (sqftInput) {
   update();
 }
 
-// Booking form.
+// ---------- booking form ----------
 const booking = document.querySelector("[data-booking]");
 if (booking) {
   // FormSubmit needs an absolute address to return to. Worked out here rather
@@ -53,49 +90,104 @@ if (booking) {
   const pkg = booking.querySelector("[data-book-package]");
   const size = booking.querySelector("[data-book-sqft]");
   const line = booking.querySelector("[data-book-estimate]");
-
-  // "Book Pro" on a pricing card arrives with ?package=Pro.
-  const wanted = new URLSearchParams(location.search).get("package");
-  if (wanted && [...pkg.options].some((o) => o.value === wanted)) pkg.value = wanted;
-
   const addonsBox = booking.querySelector("[data-addons]");
   const addons = [...booking.querySelectorAll("[data-addon]")];
+  const tour = booking.querySelector("[data-tour]");
+  const extras = [...addons, ...(tour ? [tour] : [])];
+
+  // Arriving from a pricing card or the job builder:
+  // ?package=Pro, plus &sqft=1500&addons=Elevations%20%26%20sections&tour=1.
+  const params = new URLSearchParams(location.search);
+  const wanted = params.get("package");
+  if (wanted && [...pkg.options].some((o) => o.value === wanted)) pkg.value = wanted;
+  if (Number(params.get("sqft")) > 0) size.value = Number(params.get("sqft"));
+  const wantedAddons = (params.get("addons") || "").split("|");
+  addons.forEach((a) => (a.checked = wantedAddons.includes(a.dataset.name)));
+  if (tour) tour.checked = params.get("tour") === "1";
 
   const update = () => {
-    const option = pkg.selectedOptions[0];
-    const sqft = Number(size.value) || 0;
-    const isPlans = option && "plans" in option.dataset;
-
+    const plans = isPlans(pkg.value);
     // Add-ons belong to schematic plans only; untick them when hidden so a
     // tour booking never carries them into the email.
-    if (addonsBox) addonsBox.hidden = !isPlans;
-    if (!isPlans) addons.forEach((a) => (a.checked = false));
+    if (addonsBox) addonsBox.hidden = !plans;
+    if (!plans) extras.forEach((x) => (x.checked = false));
 
-    const known = option && "rate" in option.dataset && sqft > 0;
-    line.hidden = !known;
-    if (!known) return;
-
-    if (isPlans) {
-      // A price of 0 means "quoted": named, not added to the total.
-      const priced = (el) => Number(el.dataset.flat) || Number(el.dataset.rate);
-      const cost = (el) => Number(el.dataset.flat) || Number(el.dataset.rate) * sqft;
-      const parts = [option, ...addons.filter((a) => a.checked)];
-      const quoted = parts.filter((el) => !priced(el)).map((el) => el.dataset.name || "the drawings");
-      const total = (priced(option) ? estimate(option, sqft) : 0) + addons.filter((a) => a.checked && priced(a)).reduce((sum, a) => sum + cost(a), 0);
-      line.textContent = !total
-        ? "Priced by quote once we've seen the property."
-        : `Estimated invoice: ${money(total)}${quoted.length ? ` + quote for ${quoted.join(" and ")}` : ""}`;
-      return;
-    }
-
-    // "First" only when a monthly hosting fee follows, and then the fee is named.
-    const hosting = Number(option.dataset.hosting) || 0;
-    line.textContent = hosting
-      ? `Estimated first invoice: ${money(estimate(option, sqft))} + ${money(hosting)}/mo after first month`
-      : `Estimated invoice: ${money(estimate(option, sqft))}`;
+    const sqft = Number(size.value) || 0;
+    const q = sqft > 0 ? quote({
+      pkg: pkg.value,
+      sqft,
+      addons: addons.filter((a) => a.checked).map((a) => a.dataset.name),
+      tour: !!tour?.checked,
+    }) : null;
+    line.hidden = !q;
+    if (q) line.textContent = describe(q);
   };
-  addons.forEach((a) => a.addEventListener("change", update));
+  extras.forEach((x) => x.addEventListener("change", update));
   pkg.addEventListener("change", update);
   size.addEventListener("input", update);
   update();
+}
+
+// ---------- job builder ----------
+// Questions appear one at a time as earlier ones are answered. The whole
+// section is hidden without JavaScript, since it can't work without it.
+const builder = document.querySelector("[data-builder]");
+if (builder) {
+  builder.hidden = false;
+  document.querySelectorAll("[data-builder-link]").forEach((a) => (a.hidden = false));
+
+  const form = builder.querySelector("[data-builder-form]");
+  const result = builder.querySelector("[data-builder-result]");
+  const val = (name) => form.querySelector(`input[name="${name}"]:checked`)?.value;
+  const show = (key, on) => form.querySelectorAll(`[data-show="${key}"]`).forEach((f) => (f.hidden = !on));
+
+  // Which package answers the questions, and why, in one line.
+  const recommend = () => {
+    const purpose = val("purpose");
+    if (purpose === "plans") {
+      const addons = [...form.querySelectorAll("[data-builder-addon]:checked")].map((x) => x.value);
+      const tour = val("tour") === "yes";
+      const extras = [...addons.map((a) => a.toLowerCase()), ...(tour ? ["the branded Realsee tour"] : [])];
+      return {
+        pkg: pricing.plans.name, addons, tour,
+        why: `A schematic plan of every level as it stands${extras.length ? `, with ${extras.join(" and ")}` : ""}.`,
+      };
+    }
+    if (val("kind") === "commercial")
+      return { pkg: "Pro", why: "Zillow is for homes, so a branded tour is the way to show commercial space, with a marketing plan." };
+    return {
+      zillow: { pkg: "Basic", why: "A Zillow tour and Zillow plan are all a Zillow listing needs." },
+      own: { pkg: "Pro", why: "A branded tour to share on your own website, social and email, with a marketing plan." },
+      both: { pkg: "Complete", why: "The Zillow tour and Zillow plan for your Zillow listing, and the branded tour and marketing plan for everywhere else." },
+    }[val("where")];
+  };
+
+  const update = () => {
+    const purpose = val("purpose");
+    show("listing", purpose === "listing");
+    show("home", purpose === "listing" && val("kind") === "home");
+    show("plans", purpose === "plans");
+    const answered =
+      purpose === "plans" ? !pricing.plans.tourHosting || !!val("tour")
+      : purpose === "listing" && (val("kind") === "commercial" || (val("kind") === "home" && !!val("where")));
+    show("size", answered);
+
+    const sqft = Number(form.querySelector("[data-builder-sqft]").value) || 0;
+    const rec = answered && sqft > 0 ? recommend() : null;
+    result.hidden = !rec;
+    if (!rec) return;
+
+    result.querySelector("[data-builder-name]").textContent = rec.pkg;
+    result.querySelector("[data-builder-why]").textContent = rec.why;
+    result.querySelector("[data-builder-estimate]").textContent = describe(quote({ ...rec, sqft }));
+    const link = new URLSearchParams({ package: rec.pkg, sqft: String(sqft) });
+    if (rec.addons?.length) link.set("addons", rec.addons.join("|"));
+    if (rec.tour) link.set("tour", "1");
+    const book = result.querySelector("[data-builder-book]");
+    book.href = `book.html?${link}`;
+    book.textContent = `Book ${rec.pkg}`;
+  };
+  form.addEventListener("input", update);
+  form.addEventListener("change", update);
+  form.addEventListener("submit", (e) => e.preventDefault());
 }
