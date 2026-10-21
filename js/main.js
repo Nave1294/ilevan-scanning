@@ -140,6 +140,161 @@ if (sqftInput) {
   update();
 }
 
+// ---------- the loader's personality ----------
+// On the booking page the loader is inlined, and while a request sends its
+// dot behaves like a little character: it sits on the i or the l for a
+// random moment, often pulls a face, then leaps to the other perch. When
+// the send succeeds it floats back to its place in the logo and winks. The
+// SVG keeps its own steady CSS loop for anywhere it's a plain image; with
+// reduced motion, or without the Web Animations API, that's what shows.
+const character = (svg) => {
+  const q = (sel) => svg.querySelector(sel);
+  const X = q(".ilv-x"), Y = q(".ilv-y"), dot = q(".ilv-dot"), stem = q(".ilv-stem"), bar = q(".ilv-bar");
+  const faces = { smile: q(".ilv-smile"), wow: q(".ilv-wow"), look: q(".ilv-look") };
+  const pupil = q(".ilv-pupil");
+  const parts = [X, Y, dot, stem, bar, pupil, ...Object.values(faces)];
+  // Perches, matching the offsets documented in loader.svg. `sink` is how
+  // far the dot rides down with what it lands on as that gives.
+  const PERCH = {
+    i: { x: 0, y: 243, under: stem, give: "scaleY(0.93)", sink: 84 },
+    l: { x: 575, y: -313, under: bar, give: "scaleY(0.96)", sink: 70 },
+  };
+  const APEX = -578;
+  const able = !!svg.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let running = false;
+  let on = "i";
+  let lastFace = "";
+
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  // One animation, run to its end and kept there as inline style. Resolves
+  // quietly if it's cancelled partway.
+  const play = (el, frames, opts) => {
+    const a = el.animate(frames, { fill: "forwards", ...opts });
+    return a.finished.then(
+      () => {
+        const last = frames[frames.length - 1];
+        if (last.transform) el.style.transform = last.transform;
+        if (last.opacity !== undefined) el.style.opacity = last.opacity;
+        a.cancel();
+      },
+      () => {}
+    );
+  };
+  const origin = (o) => (dot.style.transformOrigin = o);
+  const at = (p) => ({ x: `translateX(${p.x}px)`, y: `translateY(${p.y}px)` });
+
+  const land = (p) =>
+    Promise.all([
+      (origin("50% 100%"),
+      play(dot, [{ transform: "scale(0.88, 1.14)" }, { transform: `translateY(${p.sink}px) scale(1.3, 0.7)`, offset: 0.35 }, { transform: "scale(1.08, 0.92)", offset: 0.7 }, { transform: "none" }], { duration: 380, easing: "ease-out" })),
+      play(p.under, [{ transform: "none" }, { transform: p.give, offset: 0.35, easing: "cubic-bezier(0.3, 1.6, 0.5, 1)" }, { transform: "none" }], { duration: 380 }),
+    ]);
+
+  const jump = async () => {
+    const from = PERCH[on], to = PERCH[on === "i" ? "l" : "i"];
+    origin("50% 100%");
+    await play(dot, [{ transform: "none" }, { transform: "scale(1.18, 0.82)" }], { duration: 170, easing: "ease-out" });
+    await Promise.all([
+      play(X, [{ transform: at(from).x }, { transform: at(to).x }], { duration: 640, easing: "linear" }),
+      play(Y, [
+        { transform: at(from).y, easing: "cubic-bezier(0.2, 0.6, 0.35, 1)" },
+        { transform: `translateY(${APEX}px)`, offset: 0.5, easing: "cubic-bezier(0.65, 0, 0.8, 0.4)" },
+        { transform: at(to).y },
+      ], { duration: 640 }),
+      play(dot, [{ transform: "scale(0.86, 1.16)" }, { transform: "none", offset: 0.3 }, { transform: "none", offset: 0.8 }, { transform: "scale(0.88, 1.14)" }], { duration: 640 }),
+    ]);
+    on = on === "i" ? "l" : "i";
+    await land(to);
+  };
+
+  // Faces it pulls while it waits.
+  const show = (el, hold, extra = []) =>
+    play(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 })
+      .then(() => Promise.all([sleep(hold), ...extra.map((f) => f())]))
+      .then(() => play(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 180 }));
+  const blink = (ms) => (origin("50% 50%"), play(dot, [{ transform: "none" }, { transform: "scale(1.08, 0.1)", offset: 0.45 }, { transform: "scale(1.08, 0.1)", offset: 0.55 }, { transform: "none" }], { duration: ms, easing: "ease-in-out" }));
+  const FACES = {
+    wink: () => blink(520),
+    blinks: async () => { await blink(240); await sleep(90); await blink(240); },
+    smile: () => show(faces.smile, 1000, [() => (origin("50% 100%"), play(dot, [{ transform: "none" }, { transform: "scale(1.06, 0.95)", offset: 0.5 }, { transform: "none" }], { duration: 500, iterations: 2 }))]),
+    wow: () => show(faces.wow, 760, [() => (origin("50% 100%"), play(dot, [{ transform: "none" }, { transform: "scale(0.9, 1.14)", offset: 0.2 }, { transform: "scale(0.9, 1.14)", offset: 0.8 }, { transform: "none" }], { duration: 900 }))]),
+    look: () => show(faces.look, 1300, [() => play(pupil, [
+      { transform: "none" }, { transform: "translateX(-62px)", offset: 0.15 }, { transform: "translateX(-62px)", offset: 0.4 },
+      { transform: "translateX(62px)", offset: 0.55 }, { transform: "translateX(62px)", offset: 0.8 }, { transform: "none" },
+    ], { duration: 1300, easing: "ease-in-out" })]),
+    hop: async () => {
+      const p = PERCH[on];
+      for (let n = 0; n < 2; n++) {
+        await play(Y, [{ transform: at(p).y, easing: "ease-out" }, { transform: `translateY(${p.y - 110}px)`, offset: 0.5, easing: "ease-in" }, { transform: at(p).y }], { duration: 340 });
+        await land(p);
+      }
+    },
+  };
+  const pullFace = () => {
+    const names = Object.keys(FACES).filter((n) => n !== lastFace);
+    lastFace = names[Math.floor(Math.random() * names.length)];
+    return FACES[lastFace]();
+  };
+
+  const life = async () => {
+    while (running) {
+      await sleep(rand(300, 1000));
+      if (!running) return;
+      if (Math.random() < 0.75) await pullFace();
+      if (!running) return;
+      await sleep(rand(250, 1400));
+      if (!running) return;
+      await jump();
+    }
+  };
+
+  // Stop mid-move and hold wherever everything is.
+  const freeze = () => {
+    const now = parts.map((el) => [el, getComputedStyle(el).transform, getComputedStyle(el).opacity]);
+    svg.getAnimations({ subtree: true }).forEach((a) => a.cancel());
+    now.forEach(([el, t, o]) => { el.style.transform = t === "none" ? "" : t; el.style.opacity = o; });
+  };
+  const reset = () => {
+    parts.forEach((el) => el.removeAttribute("style"));
+    svg.classList.remove("ilv-scripted");
+  };
+
+  return {
+    start() {
+      if (!able || running) return;
+      reset();
+      svg.classList.add("ilv-scripted");
+      X.style.transform = at(PERCH.i).x;
+      Y.style.transform = at(PERCH.i).y;
+      on = "i";
+      running = true;
+      life();
+    },
+    stop() {
+      running = false;
+      if (able) { freeze(); reset(); }
+    },
+    // Back to its place in the logo, then a wink.
+    async finish() {
+      if (!able) return;
+      running = false;
+      freeze();
+      const settle = { duration: 380, easing: "cubic-bezier(0.3, 0.7, 0.4, 1)" };
+      await Promise.all([
+        play(X, [{ transform: X.style.transform || "none" }, { transform: "none" }], settle),
+        play(Y, [{ transform: Y.style.transform || "none" }, { transform: "none" }], settle),
+        play(dot, [{ transform: dot.style.transform || "none" }, { transform: "none" }], settle),
+        play(stem, [{ transform: stem.style.transform || "none" }, { transform: "none" }], settle),
+        play(bar, [{ transform: bar.style.transform || "none" }, { transform: "none" }], settle),
+        ...Object.values(faces).map((f) => play(f, [{ opacity: f.style.opacity || 0 }, { opacity: 0 }], { duration: 150 })),
+      ]);
+      await blink(520);
+      await sleep(180);
+    },
+  };
+};
+
 // ---------- booking form ----------
 const booking = document.querySelector("[data-booking]");
 if (booking) {
@@ -236,22 +391,7 @@ if (booking) {
   const slowNote = booking.querySelector("[data-book-slow]");
   const status = booking.querySelector("[data-book-status]");
 
-  // Done: the dot stops bouncing, settles back on its i and winks, then on
-  // to the thank-you page. If the browser can't animate, it just goes.
-  const wink = async () => {
-    const dot = wait.querySelector(".ilv-dot");
-    const stem = wait.querySelector(".ilv-stem");
-    if (!dot || !dot.animate) return;
-    const from = getComputedStyle(dot).transform;
-    dot.style.animation = stem.style.animation = "none";
-    await dot.animate([{ transform: from === "none" ? "none" : from }, { transform: "none" }], { duration: 260, easing: "ease-out" }).finished;
-    dot.style.transformOrigin = "50% 50%";
-    await dot.animate(
-      [{ transform: "none" }, { transform: "scale(1.08, 0.1)", offset: 0.4 }, { transform: "scale(1.08, 0.1)", offset: 0.55 }, { transform: "none" }],
-      { duration: 520, easing: "ease-in-out" }
-    ).finished;
-    await new Promise((r) => setTimeout(r, 180));
-  };
+  const loader = wait.querySelector(".loader") ? character(wait.querySelector(".loader")) : null;
   const failed = booking.querySelector("[data-book-error]");
   const mailto = booking.querySelector("[data-book-mailto]");
   if (booking.dataset.ajax && window.fetch) {
@@ -266,6 +406,7 @@ if (booking) {
       wait.hidden = false;
       slowNote.hidden = true;
       status.textContent = "Sending your request…";
+      loader?.start();
       const slow = setTimeout(() => (slowNote.hidden = false), 3000);
       const data = new FormData(booking);
       let ok = false;
@@ -283,7 +424,7 @@ if (booking) {
         addEventListener("pageshow", (ev) => ev.persisted && location.reload(), { once: true });
         slowNote.hidden = true;
         status.textContent = "Sent!";
-        await wink().catch(() => {});
+        await loader?.finish().catch(() => {});
         location.href = booking.querySelector("[data-next]").value || "thanks.html";
         return;
       }
@@ -291,6 +432,7 @@ if (booking) {
       // starting with _ are the form service's settings, not answers.
       const lines = [...data.entries()].filter(([k, v]) => !k.startsWith("_") && String(v).trim()).map(([k, v]) => `${k}: ${v}`);
       mailto.href = `mailto:${booking.dataset.mailto}?subject=${encodeURIComponent(subject.value)}&body=${encodeURIComponent(lines.join("\n"))}`;
+      loader?.stop();
       wait.hidden = true;
       failed.hidden = false;
       send.disabled = false;

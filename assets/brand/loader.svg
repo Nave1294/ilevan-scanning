@@ -1,41 +1,109 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -340 835 2092" role="img" aria-label="Loading">
-  <!-- The Ilevan "il" mark as a loader: the dot of the i bounces on its
-       stem like a ball, squashing on impact while the stem gives a little.
-       Geometry traced from the logo (835 x 1752); the viewBox adds headroom
-       above for the bounce. Class and keyframe names are prefixed because
-       the booking page inlines this file, where they share the page's
-       namespace. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-110 -660 1105 2432" role="img" aria-label="Loading">
+  <!-- The Ilevan "il" mark as a loader: the i's dot leaps back and forth
+       between the top of its stem and the top of the l, crouching before
+       each jump and squashing as it lands, while whatever it lands on gives
+       a little. Geometry traced from the logo (835 x 1752); the viewBox adds
+       room above for the arc and to the sides for the squash.
+
+       This file animates itself with a steady CSS loop, for use as a plain
+       image. The booking page inlines it and js/main.js takes over (adding
+       .ilv-scripted), giving the dot random pauses and faces; the white
+       features in .ilv-smile, .ilv-wow and .ilv-look exist for that and
+       stay hidden here.
+
+       Movement is split across nested layers so a jump is a true arc:
+       .ilv-x carries the dot across at a steady pace, .ilv-y rises and falls
+       with gravity-like easing, and .ilv-dot only squashes and stretches.
+       Names are prefixed because, inlined, they share the page's namespace.
+
+       Perches, as offsets from the dot's place in the logo (centre 155, 158;
+       radius 155):
+         on the i  translate(0, 243)     resting on the stem's top, y 556
+         on the l  translate(575, -313)  resting on the bar's top, y 0 -->
   <style>
-    .ilv-dot, .ilv-stem { transform-box: fill-box; transform-origin: 50% 100%; }
-    .ilv-dot { animation: ilv-bounce 1.1s infinite; }
-    .ilv-stem { animation: ilv-give 1.1s infinite; }
+    .ilv-x, .ilv-y { animation: 2.2s infinite; }
+    .ilv-x { animation-name: ilv-x; animation-timing-function: linear; }
+    .ilv-y { animation-name: ilv-y; }
+    .ilv-dot, .ilv-stem, .ilv-bar { transform-box: fill-box; transform-origin: 50% 100%; animation: 2.2s infinite; }
+    .ilv-dot { animation-name: ilv-squash; animation-timing-function: ease-in-out; }
+    .ilv-stem { animation-name: ilv-stem; }
+    .ilv-bar { animation-name: ilv-bar; }
+    .ilv-smile, .ilv-wow, .ilv-look { opacity: 0; }
+    .ilv-pupil { transform-box: fill-box; transform-origin: 50% 50%; }
 
-    /* Apex, fall, squash on the stem, spring back up. At the squash the
-       dot sits 84 lower, riding the stem's 7% dip (0.07 x 1196). */
-    @keyframes ilv-bounce {
-      0%   { transform: translateY(-300px) scale(0.92, 1.1); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
-      44%  { transform: translateY(243px) scale(0.9, 1.12); animation-timing-function: ease-out; }
-      52%  { transform: translateY(327px) scale(1.32, 0.7); animation-timing-function: ease-in-out; }
-      60%  { transform: translateY(243px) scale(0.95, 1.06); animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1); }
-      100% { transform: translateY(-300px) scale(0.92, 1.1); }
+    /* Across: still while on a perch, steady while in the air. */
+    @keyframes ilv-x {
+      0%, 8%    { transform: translateX(0); }
+      46%, 54%  { transform: translateX(575px); }
+      92%, 100% { transform: translateX(0); }
     }
-    /* The stem dips as the dot lands, then recovers. */
-    @keyframes ilv-give {
-      0%, 42%  { transform: scaleY(1); }
-      52%      { transform: scaleY(0.93); animation-timing-function: cubic-bezier(0.3, 1.6, 0.5, 1); }
-      70%, 100% { transform: scaleY(1); }
+    /* Up and down: fast off the perch, slowing to the top, then falling. */
+    @keyframes ilv-y {
+      0%, 8%    { transform: translateY(243px); animation-timing-function: cubic-bezier(0.2, 0.6, 0.35, 1); }
+      27%       { transform: translateY(-578px); animation-timing-function: cubic-bezier(0.65, 0, 0.8, 0.4); }
+      46%, 54%  { transform: translateY(-313px); animation-timing-function: cubic-bezier(0.2, 0.6, 0.35, 1); }
+      73%       { transform: translateY(-578px); animation-timing-function: cubic-bezier(0.65, 0, 0.8, 0.4); }
+      92%, 100% { transform: translateY(243px); }
+    }
+    /* The dot itself: crouch, stretch into the jump, round in the air,
+       stretch into the landing, squash, recover. On each squash it sinks
+       with whatever it lands on: the stem's 7% dip is 84 units
+       (0.07 x 1196), the bar's 4% is 70 (0.04 x 1748). */
+    @keyframes ilv-squash {
+      0%   { transform: none; }
+      5%   { transform: scale(1.18, 0.82); }
+      9%   { transform: scale(0.86, 1.16); }
+      16%  { transform: none; }
+      40%  { transform: none; }
+      46%  { transform: scale(0.88, 1.14); }
+      49%  { transform: translateY(70px) scale(1.3, 0.7); }
+      52%  { transform: scale(1.12, 0.88); }
+      55%  { transform: scale(0.86, 1.16); }
+      62%  { transform: none; }
+      86%  { transform: none; }
+      92%  { transform: scale(0.88, 1.14); }
+      95%  { transform: translateY(84px) scale(1.3, 0.7); }
+      98%  { transform: scale(0.97, 1.03); }
+      100% { transform: none; }
+    }
+    /* What it lands on gives a little, then springs back. */
+    @keyframes ilv-stem {
+      0%, 92%  { transform: scaleY(1); }
+      95%      { transform: scaleY(0.93); animation-timing-function: cubic-bezier(0.3, 1.6, 0.5, 1); }
+      100%     { transform: scaleY(1); }
+    }
+    @keyframes ilv-bar {
+      0%, 46%  { transform: scaleY(1); }
+      49%      { transform: scaleY(0.96); animation-timing-function: cubic-bezier(0.3, 1.6, 0.5, 1); }
+      56%, 100% { transform: scaleY(1); }
     }
 
-    /* Reduced motion: no bouncing, just a slow breath of the dot. */
+    /* Script in charge: the loop stands down. */
+    .ilv-scripted .ilv-x, .ilv-scripted .ilv-y, .ilv-scripted .ilv-dot,
+    .ilv-scripted .ilv-stem, .ilv-scripted .ilv-bar { animation: none; }
+
+    /* Reduced motion: no jumping, just the dot slowly breathing in place. */
     @media (prefers-reduced-motion: reduce) {
-      .ilv-dot { animation: ilv-breathe 2.4s ease-in-out infinite; transform-origin: 50% 50%; }
-      .ilv-stem { animation: none; }
+      .ilv-x, .ilv-y, .ilv-stem, .ilv-bar { animation: none; }
+      .ilv-dot { animation: ilv-breathe 2.4s ease-in-out infinite; }
       @keyframes ilv-breathe { 50% { opacity: 0.35; } }
     }
   </style>
   <g fill="#111">
     <rect class="ilv-stem" x="52" y="556" width="213" height="1196" rx="106.5"/>
-    <rect x="625" y="0" width="210" height="1748"/>
-    <circle class="ilv-dot" cx="155" cy="158" r="155"/>
+    <rect class="ilv-bar" x="625" y="0" width="210" height="1748"/>
+    <g class="ilv-x"><g class="ilv-y"><g class="ilv-dot">
+      <circle cx="155" cy="158" r="155"/>
+      <!-- Faces, drawn in white on the dot. -->
+      <g class="ilv-smile" fill="#fff">
+        <circle cx="102" cy="118" r="21"/><circle cx="208" cy="118" r="21"/>
+        <path d="M80 180 Q155 262 230 180" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round"/>
+      </g>
+      <g class="ilv-wow" fill="#fff">
+        <circle cx="102" cy="108" r="19"/><circle cx="208" cy="108" r="19"/>
+        <circle cx="155" cy="212" r="27" fill="none" stroke="#fff" stroke-width="16"/>
+      </g>
+      <g class="ilv-look"><circle class="ilv-pupil" cx="155" cy="150" r="46" fill="#fff"/></g>
+    </g></g></g>
   </g>
 </svg>
