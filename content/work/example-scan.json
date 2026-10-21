@@ -1,0 +1,12 @@
+{
+  "title": "Example scan",
+  "slug": "example-scan",
+  "published": false,
+  "order": 1,
+  "location": "",
+  "date": "",
+  "summary": "Replace this with a line about the job: the home, what was scanned, and what the client received.",
+  "cover": "",
+  "tourUrl": "",
+  "images": []
+}

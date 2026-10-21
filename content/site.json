@@ -1,0 +1,39 @@
+{
+  "name": "Ilevan Scanning",
+  "tagline": "Accurate 3D scans of your home.",
+  "intro": "We capture every room in millimetre detail, then turn the scan into a walkable virtual tour, measured floor plans, and files your architect or contractor can build from.",
+  "ctaLabel": "Book a scan",
+  "services": [
+    {
+      "title": "Virtual tours",
+      "text": "A walkable 3D model of the home, ready to share with buyers, renters, or family who can't visit in person."
+    },
+    {
+      "title": "Measured floor plans",
+      "text": "Clean, dimensioned plans of every level, drawn from the scan rather than a tape measure."
+    },
+    {
+      "title": "As-built files",
+      "text": "Point clouds and CAD-ready drawings for renovation, so design starts from what's actually there."
+    }
+  ],
+  "steps": [
+    {
+      "title": "Book",
+      "text": "Tell us the address, the size of the home, and what you need the scan for."
+    },
+    {
+      "title": "Scan",
+      "text": "We visit and scan room by room. Most homes take one to three hours."
+    },
+    {
+      "title": "Receive",
+      "text": "Your tour, plans, and files arrive by link, usually within a few days."
+    }
+  ],
+  "workIntro": "A selection of recent scans.",
+  "about": "Ilevan Scanning is run by people trained in architecture, so we know what a good set of existing-conditions drawings needs to show.",
+  "area": "Serving [your area].",
+  "email": "hello@example.com",
+  "phone": ""
+}

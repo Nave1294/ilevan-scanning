@@ -1,0 +1,114 @@
+# Dashboard configuration for Pages CMS (app.pagescms.org).
+# Saving in the dashboard commits to this repo, which rebuilds and redeploys
+# the site.
+
+media:
+  input: assets/uploads
+  output: assets/uploads
+
+content:
+  - name: work
+    label: Work
+    type: collection
+    path: content/work
+    filename: "{fields.slug}.json"
+    format: json
+    view:
+      fields: [title, location, order, published]
+      primary: title
+      sort: [order, title]
+    fields:
+      - name: title
+        label: Job name
+        type: string
+        required: true
+        description: 'Shown under the picture, e.g. "Victorian terrace, Fishtown".'
+
+      - name: slug
+        label: File name
+        type: string
+        required: true
+        pattern:
+          regex: "^[a-z0-9]+(-[a-z0-9]+)*$"
+          message: Lowercase letters, numbers and hyphens only, for example "fishtown-terrace".
+        description: Only used to name the file. Lowercase with hyphens.
+
+      - name: published
+        label: Show on site
+        type: boolean
+        default: true
+        description: Turn off to hide this job without deleting it. While no job is shown, the Work section is left off the site entirely.
+
+      - name: order
+        label: Position
+        type: number
+        default: 1
+        description: Lower numbers appear first.
+
+      - name: location
+        label: Location
+        type: string
+        description: Neighbourhood or town. Avoid full street addresses for clients' homes.
+
+      - name: date
+        label: Date
+        type: string
+        description: "e.g. 2026, or March 2026."
+
+      - name: summary
+        label: Summary
+        type: text
+        description: One or two sentences on the home, what was scanned, and what the client received.
+
+      - name: cover
+        label: Cover image
+        type: image
+        description: Shown on the card. Leave blank and the first gallery image is used. Export around 2000px wide as a JPG.
+
+      - name: tourUrl
+        label: 3D tour link
+        type: string
+        description: "Optional. A Matterport share link (https://my.matterport.com/show/?m=…) is embedded in the page; any other link becomes a button."
+
+      - name: images
+        label: Gallery
+        type: object
+        list: true
+        description: Renders, floor plans, point-cloud views. Shown full width and never cropped.
+        fields:
+          - name: src
+            label: Image
+            type: image
+          - name: caption
+            label: Caption
+            type: string
+
+  - name: site
+    label: Site text
+    type: file
+    path: content/site.json
+    format: json
+    fields:
+      - { name: name, label: Business name, type: string }
+      - { name: tagline, label: Headline, type: string }
+      - { name: intro, label: Intro, type: text }
+      - { name: ctaLabel, label: Button text, type: string }
+      - name: services
+        label: Services
+        type: object
+        list: true
+        fields:
+          - { name: title, label: Title, type: string }
+          - { name: text, label: Description, type: text }
+      - name: steps
+        label: How it works
+        type: object
+        list: true
+        fields:
+          - { name: title, label: Title, type: string }
+          - { name: text, label: Description, type: text }
+      - { name: workIntro, label: Work section intro, type: string }
+      - { name: about, label: About, type: text }
+      - { name: area, label: Area served, type: string }
+      - { name: email, label: Email, type: string }
+      - { name: phone, label: Phone, type: string, description: Optional. Leave blank to hide. }

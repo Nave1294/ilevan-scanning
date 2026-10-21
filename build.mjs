@@ -1,0 +1,267 @@
+// Generates the static site from content/ into dist/.
+//   node build.mjs
+// No dependencies. Everything the dashboard edits lives in content/.
+
+import { readFileSync, writeFileSync, readdirSync, mkdirSync, rmSync, cpSync, existsSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { createHash } from "node:crypto";
+import { fileURLToPath } from "node:url";
+
+const ROOT = dirname(fileURLToPath(import.meta.url));
+const OUT = join(ROOT, "dist");
+
+const read = (p) => JSON.parse(readFileSync(join(ROOT, p), "utf8"));
+
+// Cache-busting: a returning visitor never pairs new HTML with an old script.
+const version = (p) =>
+  createHash("sha1").update(readFileSync(join(ROOT, p), "utf8").replace(/\r/g, "")).digest("hex").slice(0, 8);
+
+/* Content comes from a dashboard, so it is never trusted as markup. */
+const esc = (s) =>
+  String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+// Paths typed into the dashboard: relative files, or https links. Anything
+// carrying another scheme (javascript:, data:) is dropped.
+const safeUrl = (s) => {
+  const v = String(s ?? "").trim().replace(/^\/+/, "");
+  if (!v) return "";
+  const scheme = /^([a-zA-Z][a-zA-Z0-9+.-]*):/.exec(v);
+  return !scheme || /^https$/i.test(scheme[1]) ? v : "";
+};
+
+// Matterport share links ("/show/?m=…") embed directly; anything else is a link.
+const embeddable = (url) => /^https:\/\/(my\.)?matterport\.com\/show\//i.test(url);
+
+/* ---------- load content ---------- */
+const site = read("content/site.json");
+
+const work = readdirSync(join(ROOT, "content/work"))
+  .filter((f) => f.endsWith(".json"))
+  .map((f) => read(join("content/work", f)))
+  .filter((w) => w.published !== false)
+  .map((w) => ({
+    ...w,
+    cover: safeUrl(w.cover) || safeUrl(w.images?.[0]?.src),
+    tourUrl: safeUrl(w.tourUrl),
+    images: (w.images || []).map((i) => ({ ...i, src: safeUrl(i.src) })).filter((i) => i.src),
+  }))
+  .sort((a, b) => (a.order ?? 99) - (b.order ?? 99) || String(a.title).localeCompare(String(b.title)));
+
+/* ---------- pieces ---------- */
+const email = String(site.email || "").trim();
+const phone = String(site.phone || "").trim();
+const mailto = email ? `mailto:${email}?subject=${encodeURIComponent("Scan enquiry")}` : "#contact";
+
+// A floor plan being scanned: the mark of the business, drawn rather than
+// photographed so the page looks finished before there is any work to show.
+const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focusable="false">
+  <g class="plan-walls">
+    <path d="M20 20 H300 M330 20 H460 V200 M460 230 V340 H20 V20"/>
+    <path d="M200 20 V110 M200 140 V200 M20 200 H90 M120 200 H300 V260 M300 290 V340 M300 200 H330 V20"/>
+    <path d="M360 200 H460"/>
+  </g>
+  <g class="plan-rays">
+    <path d="M250 270 L20 200 M250 270 L20 340 M250 270 L300 200 M250 270 L120 200 M250 270 L160 340"/>
+  </g>
+  <g class="plan-scan">
+    <circle cx="250" cy="270" r="30"/>
+    <circle cx="250" cy="270" r="62"/>
+    <circle cx="250" cy="270" r="96"/>
+  </g>
+  <circle class="plan-scanner" cx="250" cy="270" r="6"/>
+</svg>`;
+
+const services = (site.services || [])
+  .map(
+    (s, i) => `<li class="card">
+        <span class="card-num">${String(i + 1).padStart(2, "0")}</span>
+        <h3>${esc(s.title)}</h3>
+        <p>${esc(s.text)}</p>
+      </li>`
+  )
+  .join("\n      ");
+
+const steps = (site.steps || [])
+  .map(
+    (s, i) => `<li>
+        <span class="step-num">${i + 1}</span>
+        <h3>${esc(s.title)}</h3>
+        <p>${esc(s.text)}</p>
+      </li>`
+  )
+  .join("\n      ");
+
+const workCard = (w, i) => {
+  const meta = [w.location, w.date].map((v) => String(v ?? "").trim()).filter(Boolean).map(esc).join(" · ");
+  const frame = w.cover
+    ? `<img src="${esc(w.cover)}" alt="" loading="lazy" decoding="async">`
+    : `<span class="work-empty">No image yet</span>`;
+  return `<li>
+        <button class="work-card" type="button" data-open="work-${i}">
+          <span class="work-frame">${frame}</span>
+          <span class="work-title">${esc(w.title)}</span>
+          ${meta ? `<span class="work-meta">${meta}</span>` : ""}
+        </button>
+      </li>`;
+};
+
+// Each job opens in a dialog: its summary, the tour, then every image.
+const workDialog = (w, i) => {
+  const meta = [w.location, w.date].map((v) => String(v ?? "").trim()).filter(Boolean).map(esc).join(" · ");
+  const tour = w.tourUrl
+    ? embeddable(w.tourUrl)
+      ? `<div class="tour"><iframe data-src="${esc(w.tourUrl)}" title="3D tour of ${esc(w.title)}" allow="fullscreen; xr-spatial-tracking" allowfullscreen></iframe></div>
+          <p><a class="text-link" href="${esc(w.tourUrl)}" target="_blank" rel="noopener">Open the tour full screen</a></p>`
+      : `<p><a class="button" href="${esc(w.tourUrl)}" target="_blank" rel="noopener">Open the 3D tour</a></p>`
+    : "";
+  const figures = w.images
+    .map(
+      (img) => `<figure>
+            <img src="${esc(img.src)}" alt="${esc(img.caption || w.title)}" loading="lazy" decoding="async">
+            ${img.caption ? `<figcaption>${esc(img.caption)}</figcaption>` : ""}
+          </figure>`
+    )
+    .join("\n          ");
+  return `<dialog class="work-dialog" id="work-${i}" aria-labelledby="work-${i}-title">
+      <div class="dialog-inner">
+        <header class="dialog-head">
+          <div>
+            <h3 id="work-${i}-title">${esc(w.title)}</h3>
+            ${meta ? `<p class="work-meta">${meta}</p>` : ""}
+          </div>
+          <button class="dialog-close" type="button" data-close aria-label="Close">×</button>
+        </header>
+        ${w.summary ? `<p class="dialog-summary">${esc(w.summary)}</p>` : ""}
+        ${tour}
+        <div class="dialog-images">
+          ${figures}
+        </div>
+      </div>
+    </dialog>`;
+};
+
+// With nothing published the Work section, and its nav link, disappear
+// rather than showing an empty grid.
+const hasWork = work.length > 0;
+const workSection = hasWork
+  ? `<section class="section" id="work" aria-labelledby="work-heading">
+    <div class="wrap">
+      <div class="section-head">
+        <h2 id="work-heading">Work</h2>
+        ${site.workIntro ? `<p>${esc(site.workIntro)}</p>` : ""}
+      </div>
+      <ul class="work-grid">
+      ${work.map(workCard).join("\n      ")}
+      </ul>
+    </div>
+    ${work.map(workDialog).join("\n    ")}
+  </section>`
+  : "";
+
+const contactLines = [
+  email ? `<a href="${esc(mailto)}">${esc(email)}</a>` : "",
+  phone ? `<a href="tel:${esc(phone.replace(/[^\d+]/g, ""))}">${esc(phone)}</a>` : "",
+]
+  .filter(Boolean)
+  .join("\n          ");
+
+const name = esc(site.name || "Ilevan Scanning");
+const description = esc(site.intro || site.tagline || "");
+
+const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${name}</title>
+  <meta name="description" content="${description}">
+  <meta property="og:title" content="${name}">
+  <meta property="og:description" content="${description}">
+  ${work[0]?.cover ? `<meta property="og:image" content="${esc(work[0].cover)}">` : ""}
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23fff'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23fff' stroke-width='2' opacity='.5'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/style.css?v=${version("css/style.css")}">
+  <script defer src="js/main.js?v=${version("js/main.js")}"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
+      <nav aria-label="Main">
+        <a href="#services">Services</a>
+        ${hasWork ? `<a href="#work">Work</a>` : ""}
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <section class="hero">
+      <div class="wrap hero-inner">
+        <div class="hero-text">
+          <h1>${esc(site.tagline)}</h1>
+          <p class="lede">${esc(site.intro)}</p>
+          <p><a class="button" href="${esc(mailto)}">${esc(site.ctaLabel || "Get in touch")}</a></p>
+        </div>
+        <div class="hero-art">${planSvg}</div>
+      </div>
+    </section>
+
+    <section class="section" id="services" aria-labelledby="services-heading">
+      <div class="wrap">
+        <div class="section-head">
+          <h2 id="services-heading">Services</h2>
+        </div>
+        <ul class="cards">
+      ${services}
+        </ul>
+      </div>
+    </section>
+
+    <section class="section section-alt" aria-labelledby="process-heading">
+      <div class="wrap">
+        <div class="section-head">
+          <h2 id="process-heading">How it works</h2>
+        </div>
+        <ol class="steps">
+      ${steps}
+        </ol>
+      </div>
+    </section>
+
+    ${workSection}
+
+    <section class="section" id="contact" aria-labelledby="contact-heading">
+      <div class="wrap contact">
+        <div>
+          <h2 id="contact-heading">Book a scan</h2>
+          ${site.about ? `<p>${esc(site.about)}</p>` : ""}
+          ${site.area ? `<p class="muted">${esc(site.area)}</p>` : ""}
+        </div>
+        <div class="contact-lines">
+          ${contactLines}
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">© ${new Date().getFullYear()} ${name}</div>
+  </footer>
+</body>
+</html>
+`;
+
+/* ---------- write ---------- */
+rmSync(OUT, { recursive: true, force: true });
+mkdirSync(OUT, { recursive: true });
+writeFileSync(join(OUT, "index.html"), html);
+writeFileSync(join(OUT, ".nojekyll"), "");
+for (const dir of ["css", "js", "assets"]) {
+  if (existsSync(join(ROOT, dir))) cpSync(join(ROOT, dir), join(OUT, dir), { recursive: true });
+}
+console.log(`Built dist/index.html — ${work.length} published job${work.length === 1 ? "" : "s"}.`);
