@@ -23,3 +23,14 @@ A Realsee link (`https://realsee.ai/…`) or Matterport share link
 (`https://my.matterport.com/show/?m=…`) is embedded in
 the job's pop-up; any other tour link becomes a button. Gallery images are
 shown full width and never cropped; only the card thumbnail is.
+
+## Booking form
+
+"Book a scan" goes to `book.html`, a form that posts to
+[FormSubmit](https://formsubmit.co), which emails the answers to the address
+in `content/site.json`. GitHub Pages can't send mail on its own.
+
+The first submission sends that address an activation email instead of the
+booking; nothing arrives until the link in it is clicked. Changing the email
+in `site.json` means activating again. After sending, visitors land on
+`thanks.html`.

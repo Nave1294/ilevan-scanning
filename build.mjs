@@ -85,6 +85,13 @@ const sqft = (n) => n.toLocaleString("en-US") + " sq ft";
 
 // Prices are stored as numbers, not prose, so the card text and the
 // estimator are worked out from the same figures and can never disagree.
+// The figures the estimator needs, as data attributes, for the pricing cards
+// and the booking form's package options alike.
+const tierData = (t) =>
+  [["flat", t.flat], ["up-to", t.flatUpTo], ["over", t.overRate], ["rate", t.rate], ["min", t.min], ["hosting", t.hosting]]
+    .map(([k, v]) => `data-${k}="${num(v)}"`)
+    .join(" ");
+
 const tiers = (site.tiers || [])
   .map((t) => {
     const flat = num(t.flat), upTo = num(t.flatUpTo), over = num(t.overRate);
@@ -96,7 +103,7 @@ const tiers = (site.tiers || [])
       ? [upTo ? `Up to ${sqft(upTo)}` : "", over ? `then ${money(over)}/sq ft` : ""].filter(Boolean).join(", ")
       : min ? `${money(min)} minimum` : "";
     const host = hosting ? `+ ${money(hosting)}/mo hosting` : t.hostingNote || "";
-    return `<li class="tier${t.featured ? " tier-featured" : ""}" data-flat="${flat}" data-up-to="${upTo}" data-over="${over}" data-rate="${rate}" data-min="${min}" data-hosting="${hosting}">
+    return `<li class="tier${t.featured ? " tier-featured" : ""}" ${tierData(t)}>
         <h3>${esc(t.name)}</h3>
         <p class="tier-includes">${esc(t.includes)}</p>
         <p class="tier-price">${price}</p>
@@ -105,6 +112,7 @@ const tiers = (site.tiers || [])
           ${host ? `<li>${esc(host)}</li>` : ""}
         </ul>
         <p class="tier-estimate" hidden>First invoice <strong data-estimate></strong></p>
+        <a class="tier-book" href="book.html?package=${encodeURIComponent(t.name || "")}">Book ${esc(t.name)}</a>
       </li>`;
   })
   .join("\n      ");
@@ -197,16 +205,22 @@ const contactLines = [
 
 const name = esc(site.name || "Ilevan Scanning");
 const description = esc(site.intro || site.tagline || "");
+const bookLabel = esc(site.ctaLabel || "Book a scan");
 
-const html = `<!doctype html>
+/* ---------- shared frame ----------
+   On the home page the nav jumps within the page; elsewhere it links back to
+   the home page's sections. */
+const page = ({ title, desc = description, home = false, body }) => {
+  const at = home ? "" : "index.html";
+  return `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${name}</title>
-  <meta name="description" content="${description}">
-  <meta property="og:title" content="${name}">
-  <meta property="og:description" content="${description}">
+  <title>${title}</title>
+  <meta name="description" content="${desc}">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${desc}">
   ${work[0]?.cover ? `<meta property="og:image" content="${esc(work[0].cover)}">` : ""}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23fff'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23fff' stroke-width='2' opacity='.5'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css?v=${version("css/style.css")}">
@@ -215,22 +229,37 @@ const html = `<!doctype html>
 <body>
   <header class="site-header">
     <div class="wrap header-inner">
-      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
+      <a class="brand" href="${home ? "#top" : "index.html"}"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
       <nav aria-label="Main">
-        <a href="#pricing">Pricing</a>
-        ${hasWork ? `<a href="#work">Work</a>` : ""}
-        <a href="#contact">Contact</a>
+        <a href="${at}#pricing">Pricing</a>
+        ${hasWork ? `<a href="${at}#work">Work</a>` : ""}
+        <a href="book.html">Book</a>
       </nav>
     </div>
   </header>
 
   <main id="top">
-    <section class="hero">
+${body}
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">© ${new Date().getFullYear()} ${name}</div>
+  </footer>
+</body>
+</html>
+`;
+};
+
+/* ---------- home ---------- */
+const home = page({
+  title: name,
+  home: true,
+  body: `    <section class="hero">
       <div class="wrap hero-inner">
         <div class="hero-text">
           <h1>${esc(site.tagline)}</h1>
           <p class="lede">${esc(site.intro)}</p>
-          <p><a class="button" href="${esc(mailto)}">${esc(site.ctaLabel || "Get in touch")}</a></p>
+          <p><a class="button" href="book.html">${bookLabel}</a></p>
         </div>
         <div class="hero-art">${planSvg}</div>
       </div>
@@ -272,27 +301,107 @@ const html = `<!doctype html>
           <h2 id="contact-heading">Book a scan</h2>
           ${site.about ? `<p>${esc(site.about)}</p>` : ""}
           ${site.area ? `<p class="muted">${esc(site.area)}</p>` : ""}
+          <p><a class="button" href="book.html">${bookLabel}</a></p>
         </div>
         <div class="contact-lines">
           ${contactLines}
         </div>
       </div>
-    </section>
-  </main>
+    </section>`,
+});
 
-  <footer class="site-footer">
-    <div class="wrap">© ${new Date().getFullYear()} ${name}</div>
-  </footer>
-</body>
-</html>
-`;
+/* ---------- booking form ----------
+   GitHub Pages can't send mail, so the form posts to FormSubmit, which emails
+   the fields to the address in site.json. Its very first submission sends that
+   address an activation link instead; nothing is delivered until it's clicked.
+   Fields starting with _ are FormSubmit settings, not questions. */
+const tierOptions = (site.tiers || [])
+  .map((t) => `<option value="${esc(t.name)}" ${tierData(t)}>${esc(t.name)}: ${esc(t.includes)}</option>`)
+  .join("\n                ");
+
+const field = (id, label, input, hint = "") =>
+  `<div class="field">
+              <label for="${id}">${label}</label>
+              ${input}
+              ${hint ? `<p class="hint">${hint}</p>` : ""}
+            </div>`;
+
+const req = `<span class="req" aria-hidden="true">*</span>`;
+
+const book = page({
+  title: `${bookLabel} · ${name}`,
+  body: `    <section class="section form-section">
+      <div class="wrap form-layout">
+        <div class="form-intro">
+          <h1>${bookLabel}</h1>
+          <p class="lede">Tell us about the property and we'll reply to confirm a time and the price.</p>
+          <div class="contact-lines contact-lines-small">
+            ${contactLines}
+          </div>
+        </div>
+
+        <form class="booking" action="https://formsubmit.co/${esc(email)}" method="POST" data-booking>
+          <input type="hidden" name="_subject" value="New scan booking">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_next" value="" data-next>
+          <input class="honey" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+          <fieldset>
+            <legend>You</legend>
+            ${field("name", `Name ${req}`, `<input id="name" name="Name" type="text" autocomplete="name" required>`)}
+            ${field("email", `Email ${req}`, `<input id="email" name="email" type="email" autocomplete="email" required>`, "Replies go here.")}
+            ${field("phone", "Phone", `<input id="phone" name="Phone" type="tel" autocomplete="tel">`)}
+            ${field("brokerage", "Brokerage", `<input id="brokerage" name="Brokerage" type="text" autocomplete="organization">`)}
+          </fieldset>
+
+          <fieldset>
+            <legend>The property</legend>
+            ${field("address", `Address ${req}`, `<input id="address" name="Address" type="text" autocomplete="street-address" required>`)}
+            ${field("sqft", `Square footage ${req}`, `<input id="sqft" name="Square footage" type="number" inputmode="numeric" min="100" step="1" required data-book-sqft>`)}
+            ${field("package", `Package ${req}`, `<select id="package" name="Package" required data-book-package>
+                <option value="">Choose a package</option>
+                ${tierOptions}
+                <option value="Not sure">Not sure yet</option>
+              </select>`)}
+            <p class="estimate-line" hidden data-book-estimate></p>
+          </fieldset>
+
+          <fieldset>
+            <legend>Scheduling</legend>
+            ${field("dates", "Preferred dates or times", `<input id="dates" name="Preferred dates" type="text" placeholder="e.g. Tue or Wed morning">`)}
+            ${field("access", "Access", `<input id="access" name="Access" type="text" placeholder="Lockbox, occupied, pets…">`)}
+            ${field("notes", "Anything else", `<textarea id="notes" name="Notes" rows="4"></textarea>`)}
+          </fieldset>
+
+          <p><button class="button" type="submit">Send booking request</button></p>
+          <p class="hint">This sends your details to ${name} by email. We'll reply to confirm; nothing is booked until we do.</p>
+        </form>
+      </div>
+    </section>`,
+});
+
+const thanks = page({
+  title: `Thanks · ${name}`,
+  body: `    <section class="section form-section">
+      <div class="wrap thanks">
+        <h1>Request sent.</h1>
+        <p class="lede">Thanks. We'll reply by email to confirm a time and the price.</p>
+        <p><a class="button" href="index.html">Back to the site</a></p>
+      </div>
+    </section>`,
+});
+
+if (!email) console.warn("Warning: no email in content/site.json, so the booking form has nowhere to send.");
 
 /* ---------- write ---------- */
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
-writeFileSync(join(OUT, "index.html"), html);
+writeFileSync(join(OUT, "index.html"), home);
+writeFileSync(join(OUT, "book.html"), book);
+writeFileSync(join(OUT, "thanks.html"), thanks);
 writeFileSync(join(OUT, ".nojekyll"), "");
 for (const dir of ["css", "js", "assets"]) {
   if (existsSync(join(ROOT, dir))) cpSync(join(ROOT, dir), join(OUT, dir), { recursive: true });
 }
-console.log(`Built dist/index.html — ${work.length} published job${work.length === 1 ? "" : "s"}.`);
+console.log(`Built index, book and thanks pages — ${work.length} published job${work.length === 1 ? "" : "s"}.`);

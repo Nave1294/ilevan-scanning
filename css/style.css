@@ -223,3 +223,43 @@ nav a:hover { color: var(--text); }
   nav { gap: 14px; font-size: 14px; }
   .work-grid { grid-template-columns: 1fr; }
 }
+
+/* ---------- booking form ---------- */
+.form-section { border-top: 0; }
+.form-layout { display: grid; grid-template-columns: 1fr 1.4fr; gap: clamp(32px, 6vw, 80px); align-items: start; }
+.form-intro { position: sticky; top: 96px; }
+.form-intro h1, .thanks h1 { font-size: clamp(34px, 5vw, 52px); margin-bottom: 16px; }
+.contact-lines-small { margin-top: 32px; }
+.contact-lines-small a { font-size: 18px; }
+
+.booking fieldset { border: 0; margin: 0 0 32px; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 16px 20px; }
+.booking legend { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); padding: 0; margin-bottom: 16px; }
+.field { display: grid; gap: 6px; }
+.field:has(textarea), .field:has(select), .field:has(#address) { grid-column: 1 / -1; }
+.field label { font-size: 15px; font-weight: 550; }
+.req { color: var(--accent); }
+.booking input, .booking select, .booking textarea {
+  width: 100%;
+  font: inherit; font-size: 16px; color: var(--text);
+  padding: 11px 13px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+}
+.booking textarea { resize: vertical; }
+/* Keeps a field the browser scrolls to on a failed submit clear of the sticky header. */
+.booking input, .booking select, .booking textarea { scroll-margin-top: 120px; }
+.booking input:focus-visible, .booking select:focus-visible, .booking textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+.booking button { border: 0; cursor: pointer; font: inherit; font-weight: 600; font-size: 15px; }
+.hint { color: var(--muted); font-size: 14px; margin: 0; }
+.estimate-line { grid-column: 1 / -1; margin: 0; font-weight: 600; color: var(--accent); }
+.honey { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+
+.tier-book { margin-top: 20px; color: var(--accent); font-weight: 600; font-size: 15px; }
+.thanks { max-width: 640px; }
+
+@media (max-width: 820px) {
+  .form-layout { grid-template-columns: 1fr; }
+  .form-intro { position: static; }
+}
+@media (max-width: 520px) {
+  .booking fieldset { grid-template-columns: 1fr; }
+}
