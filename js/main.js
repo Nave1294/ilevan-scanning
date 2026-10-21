@@ -1458,19 +1458,20 @@ if (builder) {
 }
 
 // ---------- hero: the eye scans, builds, then lives in the floor plan ----------
-// The plan starts empty. The eye comes in through the side door and goes
+// The plan starts empty. The eye comes in through the front door and goes
 // room to room, only ever through doorways. In each room it glances along
 // dotted lines of sight to the corners and walls, and the room's walls build
 // in, spreading out from the eye. Then it moves in: furnishes the place and
-// measures two walls, and welcomes its family in at the side door: a partner
+// measures two walls, and welcomes its family in at the front door: a partner
 // and two kids. Together they watch TV, cook (the kids play chase meanwhile),
 // eat dinner round the table and have a dance party. Then the kids get ready
 // for bed: a bath, teeth brushed, tucked in and read a story till they nod
 // off, and the parents go to bed too. In the morning the kids wake first and
 // pile onto the big bed, the parents wake up to them, and there they all
 // stay, awake and still. Once through, about three minutes, never repeated.
-// Desktop only: phones don't show the drawing. With reduced motion (or
-// without JavaScript) the plan is shown finished and furnished.
+// On phones it sits below the buttons and starts when scrolled to. With
+// reduced motion (or without JavaScript) the plan is shown finished and
+// furnished.
 const plan = document.querySelector("[data-plan]");
 if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const NS = "http://www.w3.org/2000/svg";
@@ -1536,9 +1537,9 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 
   // Someone in the house: an eye with a pupil, at a place, of a size. The
   // logo's eye is already drawn; the family are added as they arrive.
-  const FRONT = [460, 222]; // the side door, in the dining room's outside wall
+  const FRONT = [243, 340]; // the front door, in the living room's outside wall right of the sofa
   class Eye {
-    constructor({ el = null, r = 10, x = FRONT[0] + 28, y = FRONT[1] } = {}) {
+    constructor({ el = null, r = 10, x = FRONT[0], y = FRONT[1] + 28 } = {}) {
       if (!el) {
         el = shape("g", { class: "plan-eye" }, plan);
         plan.insertBefore(el, plan.querySelector(".plan-eye"));
@@ -1588,7 +1589,7 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   }
 
   const me = new Eye({ el: plan.querySelector(".plan-eye") });
-  me.lookAt(420, FRONT[1]);
+  me.lookAt(FRONT[0], 300);
 
   const scan = async (room, i) => {
     for (const [x, y] of room.sights) {
@@ -1653,10 +1654,11 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   // ---- The family ----
   let partner, kidA, kidB, family = [];
 
-  // At the side door: one by one they come in, each greeted with a hop.
+  // At the front door: one by one they come in, each greeted with a hop.
   const welcome = async () => {
-    await me.walkTo(434, FRONT[1]);
-    me.lookAt(480, FRONT[1]);
+    await me.walkTo(215, 276);
+    await me.walkTo(FRONT[0], 312);
+    me.lookAt(FRONT[0], 360);
     await sleep(500);
     await me.hop(6);
     partner = new Eye();
@@ -1664,13 +1666,13 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     kidB = new Eye({ r: 6.5 });
     family = [partner, kidA, kidB];
     // Step aside to let them in.
-    await me.glide(436, 252);
+    await me.glide(276, 300);
     me.lookAt(...FRONT);
-    const spots = [[400, 226], [372, 238], [346, 220]];
+    const spots = [[232, 282], [206, 266], [258, 260]];
     for (let k = 0; k < family.length; k++) {
       const f = family[k];
-      f.lookAt(420, FRONT[1]);
-      await f.glide(FRONT[0] - 4, FRONT[1]);
+      f.lookAt(FRONT[0], 300);
+      await f.glide(FRONT[0], FRONT[1] - 4);
       f.here = 0;
       await all(f.glide(...spots[k]), me.hop(6));
       await all(f.hop(f.r < 10 ? 10 : 6), me.blink());
@@ -1943,12 +1945,15 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     kidB.lookAt(partner.x, partner.y);
   };
 
+  // Empty from the start, so a phone scrolling down to it never sees the
+  // finished plan vanish.
+  plan.querySelectorAll(".plan-item").forEach((el) => (el.style.opacity = 0));
+  walls.setAttribute("mask", "url(#plan-built)");
+
   const run = async () => {
-    plan.querySelectorAll(".plan-item").forEach((el) => (el.style.opacity = 0));
-    walls.setAttribute("mask", "url(#plan-built)");
-    // In through the side door, then each room in turn.
+    // In through the front door, then each room in turn.
     await sleep(400);
-    await me.glide(FRONT[0] - 2, FRONT[1]);
+    await me.glide(FRONT[0], FRONT[1] - 2);
     for (let i = 0; i < rooms.length; i++) {
       await me.walkTo(rooms[i].cx, rooms[i].cy);
       await sleep(200);
@@ -1960,12 +1965,14 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await sleep(700);
 
     // Moving in: furniture, room by room, in the order it scanned them.
+    // From the speaker, round under the TV to the dining room.
     const furnish = [
-      ["table", 348, 285], ["counter", 400, 150], ["stove", 405, 101], ["tv", 190, 240],
-      ["sofa", 130, 280], ["speaker", 70, 228], ["kidbeds", 265, 150], ["sink", 238, 62],
+      ["tv", 190, 240], ["sofa", 130, 280], ["speaker", 70, 228], ["table", 348, 285, [200, 262]],
+      ["counter", 400, 150], ["stove", 405, 101], ["kidbeds", 265, 150], ["sink", 238, 62],
       ["tub", 272, 58], ["bed", 150, 90],
     ];
-    for (const [name, x, y] of furnish) {
+    for (const [name, x, y, via] of furnish) {
+      if (via) await me.walkTo(...via);
       await me.walkTo(x, y);
       await setDown(name);
       await sleep(350);
@@ -1999,12 +2006,14 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await morning();
   };
 
-  // Only once the drawing is actually on screen (desktop widths).
-  const wide = matchMedia("(min-width: 821px)");
-  let started = false;
-  const start = () => { if (!started && wide.matches) { started = true; run(); } };
-  start();
-  wide.addEventListener("change", start);
+  // Only once the drawing is actually on screen: straight away on desktop,
+  // where it sits beside the headline, and when scrolled to on phones,
+  // where it sits below the buttons.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver((entries, seen) => {
+      if (entries.some((e) => e.isIntersecting)) { seen.disconnect(); run(); }
+    }, { threshold: 0.5 }).observe(plan);
+  } else run();
 }
 
 // ---------- the mascot at the foot of the home page ----------

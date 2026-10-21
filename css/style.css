@@ -481,7 +481,9 @@ html.is-sending { overflow: hidden; }
   /* Hero: headline, one sentence, two buttons. */
   .hero { padding: 36px 0 40px; }
   .hero-inner { display: block; }
-  .hero-art, .lede-more { display: none; }
+  .lede-more { display: none; }
+  /* The floor plan, under the buttons, the width of the column. */
+  .hero-art { margin: 32px auto 0; max-width: 400px; }
   .eyebrow { font-size: 12px; margin-bottom: 14px; }
   .hero h1 { font-size: 36px; line-height: 1.08; margin-bottom: 14px; max-width: none; }
   .lede { font-size: 17px; margin-bottom: 28px; }

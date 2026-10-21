@@ -62,7 +62,7 @@ const mailto = email ? `mailto:${email}?subject=${encodeURIComponent("Scan enqui
 
 // A floor plan being scanned: the mark of the business, drawn rather than
 // photographed so the page looks finished before there is any work to show.
-// js/main.js brings it to life: the logo's eye comes in through the side
+// js/main.js brings it to life: the logo's eye comes in through the front
 // door, goes room to room through the doorways, sends out dotted lines of
 // sight, and each room's walls build in as it's scanned. Then it moves in,
 // furnishes the place, measures up, and welcomes its family; a whole evening
@@ -75,22 +75,22 @@ const mailto = email ? `mailto:${email}?subject=${encodeURIComponent("Scan enqui
 // Rooms are listed in the order the eye scans them; doors join two rooms
 // (by index) at a point on the wall between them.
 const PLAN_ROOMS = [
-  { x: 300, y: 200, w: 160, h: 140 }, // dining, entered from outside by the side door
+  { x: 20, y: 200, w: 280, h: 140 }, // living room, entered by the front door right of the sofa
+  { x: 300, y: 200, w: 160, h: 140 }, // dining
   { x: 330, y: 20, w: 130, h: 180 }, // kitchen
-  { x: 20, y: 200, w: 280, h: 140 }, // living room
   { x: 200, y: 90, w: 130, h: 110 }, // kids' room
   { x: 200, y: 20, w: 130, h: 70 }, // bathroom, between the two bedrooms
   { x: 20, y: 20, w: 180, h: 180 }, // bedroom
 ];
 const PLAN_DOORS = [
-  [0, 1, 345, 200],
-  [0, 2, 300, 225],
+  [0, 1, 300, 225],
+  [1, 2, 345, 200],
   // Kids' room to bathroom listed before kids' room to living room, so the
   // way from the kids' room to the big bedroom is through the bathroom.
   [3, 4, 265, 90],
-  [2, 3, 250, 200],
+  [0, 3, 250, 200],
   [4, 5, 200, 55],
-  [5, 2, 105, 200],
+  [5, 0, 105, 200],
 ];
 // Furniture, as simple outlines. Hidden while the eye is still to place it.
 const PLAN_ITEMS = {
@@ -114,7 +114,7 @@ const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focu
     </mask>
   </defs>
   <g class="plan-walls">
-    <path d="M20 20 H460 V205 M460 240 V340 H20 V20"/>
+    <path d="M20 20 H460 V340 H262 M224 340 H20 V20"/>
     <path d="M200 20 V40 M200 70 V200 M20 200 H90 M120 200 H235 M265 200 H330 V20 M300 200 V210 M300 240 V340"/>
     <path d="M200 90 H250 M280 90 H330 M360 200 H460"/>
   </g>
