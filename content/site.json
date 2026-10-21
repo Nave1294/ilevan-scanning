@@ -101,9 +101,9 @@
         "name": "Elevations & sections",
         "text": "Exterior elevations and building sections, drawn from the same scan.",
         "flat": 0,
-        "rate": 0.3,
+        "rate": 0.4,
         "per": "building",
-        "min": 0
+        "min": 500
       },
       {
         "name": "Proposed layout",
