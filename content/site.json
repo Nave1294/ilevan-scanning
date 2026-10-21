@@ -22,7 +22,7 @@
       "flat": 0,
       "flatUpTo": 0,
       "overRate": 0,
-      "rate": 0.10,
+      "rate": 0.1,
       "min": 159,
       "hosting": 10,
       "hostingNote": "",
@@ -42,6 +42,34 @@
     }
   ],
   "pricingNote": "The first invoice includes the first month of hosting. Floor plan dimensions are approximate and for marketing purposes only.",
+  "compare": {
+    "heading": "Zillow tour or branded tour?",
+    "intro": "Both are walkable 3D tours of the home. The difference is whose name is on them, and where they work best.",
+    "options": [
+      {
+        "title": "Zillow 3D tour",
+        "tag": "Basic",
+        "points": [
+          "Built for your Zillow listing, where it sits alongside the photos.",
+          "Plays in Zillow's viewer, with Zillow's look and branding. There's no room for your logo or contact details.",
+          "Shareable by link, but every view runs on Zillow's platform and is presented their way.",
+          "Hosting is free."
+        ]
+      },
+      {
+        "title": "Branded Realsee tour",
+        "tag": "Pro",
+        "points": [
+          "Carries your branding, so the tour markets you wherever it's shared.",
+          "Embed it on your own website, or send it by text, email and social with no Zillow page around it.",
+          "Captured with a LiDAR scanner, which measures each room as it scans, and comes with a floor plan drafted from it.",
+          "Stays live for as long as hosting continues."
+        ],
+        "featured": true
+      }
+    ],
+    "both": "Complete gets you both: the Zillow tour for your Zillow listing, and the branded tour for everywhere else."
+  },
   "steps": [
     {
       "title": "Book",

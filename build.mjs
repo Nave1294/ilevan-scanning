@@ -207,6 +207,35 @@ const name = esc(site.name || "Ilevan Scanning");
 const description = esc(site.intro || site.tagline || "");
 const bookLabel = esc(site.ctaLabel || "Book a scan");
 
+// Basic or Pro, side by side. Left out entirely when the dashboard has no
+// options for it.
+const compare = site.compare || {};
+const compareOptions = (compare.options || [])
+  .map(
+    (o) => `<div class="compare-card${o.featured ? " compare-featured" : ""}">
+            ${o.tag ? `<span class="compare-tag">${esc(o.tag)}</span>` : ""}
+            <h3>${esc(o.title)}</h3>
+            <ul>
+              ${(o.points || []).map((pt) => `<li>${esc(pt)}</li>`).join("\n              ")}
+            </ul>
+          </div>`
+  )
+  .join("\n          ");
+const compareSection = compareOptions
+  ? `<section class="section" id="compare" aria-labelledby="compare-heading">
+      <div class="wrap">
+        <div class="section-head section-head-stack">
+          <h2 id="compare-heading">${esc(compare.heading || "Which tour?")}</h2>
+          ${compare.intro ? `<p>${esc(compare.intro)}</p>` : ""}
+        </div>
+        <div class="compare">
+          ${compareOptions}
+        </div>
+        ${compare.both ? `<p class="compare-both">${esc(compare.both)}</p>` : ""}
+      </div>
+    </section>`
+  : "";
+
 /* ---------- shared frame ----------
    On the home page the nav jumps within the page; elsewhere it links back to
    the home page's sections. */
@@ -281,6 +310,8 @@ const home = page({
         ${site.pricingNote ? `<p class="pricing-note">${esc(site.pricingNote)}</p>` : ""}
       </div>
     </section>
+
+    ${compareSection}
 
     <section class="section section-alt" aria-labelledby="process-heading">
       <div class="wrap">

@@ -110,6 +110,23 @@ content:
           - { name: hostingNote, label: Hosting note, type: string, description: 'Shown when hosting is 0, e.g. "Hosting free on Zillow".' }
           - { name: featured, label: Highlight this tier, type: boolean }
       - { name: pricingNote, label: Note under pricing, type: text }
+      - name: compare
+        label: Tour comparison
+        type: object
+        description: The section under pricing comparing the Zillow tour with the branded tour. Remove every option to hide it.
+        fields:
+          - { name: heading, label: Heading, type: string }
+          - { name: intro, label: Intro, type: text }
+          - name: options
+            label: Options
+            type: object
+            list: true
+            fields:
+              - { name: title, label: Title, type: string }
+              - { name: tag, label: Package label, type: string, description: 'Small label above the title, e.g. "Basic".' }
+              - { name: points, label: Points, type: string, list: true }
+              - { name: featured, label: Highlight, type: boolean }
+          - { name: both, label: Closing line, type: text, description: Shown under the two cards. }
       - name: steps
         label: How it works
         type: object
