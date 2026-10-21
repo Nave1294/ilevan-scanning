@@ -224,20 +224,24 @@ const compareOptions = (compare.options || [])
           </div>`
   )
   .join("\n          ");
-const compareSection = compareOptions
-  ? `<section class="section" id="compare" aria-labelledby="compare-heading">
-      <div class="wrap">
-        <div class="section-head section-head-stack">
-          <h2 id="compare-heading">${esc(compare.heading || "Which tour?")}</h2>
-          ${compare.intro ? `<p>${esc(compare.intro)}</p>` : ""}
-        </div>
-        <div class="compare">
-          ${compareOptions}
-        </div>
-        ${compare.both ? `<p class="compare-both">${esc(compare.both)}</p>` : ""}
-      </div>
-    </section>`
+// A subsection of marketing pricing, not a section of its own: it explains
+// the choice between the tiers above it.
+const compareBlock = compareOptions
+  ? `<div class="compare-block" id="compare" aria-labelledby="compare-heading">
+          <div class="section-head section-head-stack">
+            <h3 id="compare-heading" class="subhead">${esc(compare.heading || "Which tour?")}</h3>
+            ${compare.intro ? `<p>${esc(compare.intro)}</p>` : ""}
+          </div>
+          <div class="compare">
+            ${compareOptions}
+          </div>
+          ${compare.both ? `<p class="compare-both">${esc(compare.both)}</p>` : ""}
+        </div>`
   : "";
+
+// A category's small label above its heading.
+const kicker = (text) => (text ? `<p class="eyebrow kicker">${esc(text)}</p>` : "");
+const pricingHeading = esc(site.pricingHeading || "Pricing");
 
 // Schematic plans: a base drawing set plus optional add-ons. Each is priced
 // flat, per square foot (with a minimum), or left at 0 to read "Quoted".
@@ -268,6 +272,7 @@ const plansSection = plans.name
   ? `<section class="section" id="plans" aria-labelledby="plans-heading">
       <div class="wrap">
         <div class="section-head section-head-stack">
+          ${kicker(plans.kicker)}
           <h2 id="plans-heading">${esc(plans.heading || PLANS_PACKAGE)}</h2>
           ${plans.intro ? `<p>${esc(plans.intro)}</p>` : ""}
         </div>
@@ -407,10 +412,13 @@ const tierRows = (site.tiers || []).map((t) => {
   });
 });
 
-const plansRow = plans.name
+// Schematic plan pricing on phones: one card listing every line with its
+// price, open from the start, since each line is a single number.
+const plansList = plans.name
   ? (() => {
       const base = priceLabel(plans);
-      const addonRows = [
+      const rows = [
+        [plans.name, `${base.main}${base.unit}`, base.terms],
         ...(plans.addons || []).map((a) => {
           const pr = priceLabel(a, "+");
           const under = [a.per === "changes" ? "of changes" : "", num(a.min) ? `${money(num(a.min))} minimum` : ""].filter(Boolean).join(" · ");
@@ -418,33 +426,37 @@ const plansRow = plans.name
         }),
         ...(tourHosting ? [["Branded Realsee tour", `${money(tourHosting)}/mo`, "hosting"]] : []),
       ];
-      return svcRow({
-        name: PLANS_PACKAGE,
-        line: plans.short || plans.name,
-        from: money(num(plans.min) || num(plans.flat) || num(plans.rate)),
-        body: `<p class="svc-terms"><strong>${base.main}${base.unit}</strong>${base.terms ? `<span>${esc(base.terms)}</span>` : ""}</p>
-            <p class="svc-desc">${esc(plans.includes)}</p>
-            ${addonRows.length ? `<p class="svc-sub">Add-ons</p>
-            <ul class="svc-addons">${addonRows
-              .map(([n, pr, under]) => `<li><span>${esc(n)}</span><span class="svc-addon-price">${esc(pr)}${under ? `<small>${esc(under)}</small>` : ""}</span></li>`)
-              .join("")}</ul>` : ""}
-            ${plans.note ? `<p class="fine">${esc(plans.note)}</p>` : ""}
-            ${svcBook(PLANS_PACKAGE, "Book schematic plans")}`,
-      });
+      return `<div class="plan-list">
+          <p class="svc-desc">${esc(plans.includes)}</p>
+          <ul class="svc-addons">${rows
+            .map(([n, pr, under], i) => `<li${i ? "" : ' class="plan-base"'}><span>${esc(n)}${i ? "" : `<small>Included</small>`}</span><span class="svc-addon-price">${esc(pr)}${under ? `<small>${esc(under)}</small>` : ""}</span></li>`)
+            .join("")}</ul>
+          ${plans.note ? `<p class="fine">${esc(plans.note)}</p>` : ""}
+          ${svcBook(PLANS_PACKAGE, "Book schematic plans")}
+        </div>`;
     })()
   : "";
 
 // Placed after the schematic plans section, not beside the builder where
 // phones show it: on desktop even a hidden section in between changes which
-// section borders apply. On phones the three sections before it are hidden,
-// so it follows the builder anyway.
+// section borders apply. On phones the two sections before it (marketing
+// pricing and schematic plan pricing) are hidden, so it follows the builder
+// anyway.
 const packagesSection = `<section class="section m-only" id="packages" aria-labelledby="packages-heading">
       <div class="wrap">
-        <h2 id="packages-heading" class="m-heading">Packages</h2>
-        <div class="svc-list">
-        ${[...tierRows, plansRow].filter(Boolean).join("\n        ")}
+        <div class="m-group">
+          ${kicker(site.pricingKicker)}
+          <h2 id="packages-heading" class="m-heading">${pricingHeading}</h2>
+          <div class="svc-list">
+          ${tierRows.join("\n          ")}
+          </div>
+          ${site.pricingNote ? `<p class="fine">${esc(site.pricingNote)}</p>` : ""}
         </div>
-        ${site.pricingNote ? `<p class="fine">${esc(site.pricingNote)}</p>` : ""}
+        ${plansList ? `<div class="m-group">
+          ${kicker(plans.kicker)}
+          <h2 class="m-heading">${esc(plans.heading || PLANS_PACKAGE)}</h2>
+          ${plansList}
+        </div>` : ""}
       </div>
     </section>`;
 
@@ -485,8 +497,8 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
     <div class="wrap header-inner">
       <a class="brand" href="${home ? "#top" : "index.html"}"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
       <nav aria-label="Main">
-        <a href="${at}#pricing">Pricing</a>
-        ${plansSection ? `<a href="${at}#plans">Schematic plans</a>` : ""}
+        <a href="${at}#pricing">${pricingHeading}</a>
+        ${plansSection ? `<a href="${at}#plans">${esc(plans.heading || PLANS_PACKAGE)}</a>` : ""}
         ${hasWork ? `<a href="${at}#work">Work</a>` : ""}
         <a href="book.html"${path === "book.html" ? ' aria-current="page"' : ""}>Book</a>
       </nav>
@@ -526,7 +538,10 @@ const home = page({
     <section class="section" id="pricing" aria-labelledby="pricing-heading">
       <div class="wrap">
         <div class="section-head">
-          <h2 id="pricing-heading">Pricing</h2>
+          <div>
+            ${kicker(site.pricingKicker)}
+            <h2 id="pricing-heading">${pricingHeading}</h2>
+          </div>
           <label class="estimator" hidden>
             <span>Home size</span>
             <input type="number" inputmode="numeric" min="100" step="50" value="1500" data-sqft>
@@ -537,10 +552,11 @@ const home = page({
       ${tiers}
         </ul>
         ${site.pricingNote ? `<p class="pricing-note">${esc(site.pricingNote)}</p>` : ""}
+
+        ${compareBlock}
       </div>
     </section>
 
-    ${compareSection}
 
     ${plansSection}
 

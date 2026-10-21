@@ -95,6 +95,8 @@ content:
       - { name: tagline, label: Headline, type: string }
       - { name: intro, label: Intro, type: text }
       - { name: ctaLabel, label: Button text, type: string }
+      - { name: pricingKicker, label: Marketing pricing label, type: string, description: 'Small line above the heading, e.g. "For listings".' }
+      - { name: pricingHeading, label: Marketing pricing heading, type: string, description: "Also the header link's text." }
       - name: tiers
         label: Pricing tiers
         type: object
@@ -136,7 +138,8 @@ content:
         type: object
         description: "The schematic plans section and booking option. Say \"schematic plan\" here, never \"floor plan\" or \"marketing plan\". Prices work like the tiers: Flat price, or Per sq ft with a Minimum. Leave both at 0 to show Quoted."
         fields:
-          - { name: heading, label: Heading, type: string }
+          - { name: kicker, label: Label above heading, type: string, description: 'e.g. "For renovations and additions".' }
+          - { name: heading, label: Heading, type: string, description: "Also the header link's text." }
           - { name: intro, label: Intro, type: text }
           - { name: name, label: Base drawing set, type: string, description: 'e.g. "Existing conditions". Clear it to hide the whole section.' }
           - { name: includes, label: What's included, type: text }

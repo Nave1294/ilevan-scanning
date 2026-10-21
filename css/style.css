@@ -275,6 +275,19 @@ nav a:hover { color: var(--text); }
   .booking fieldset { grid-template-columns: 1fr; }
 }
 
+/* ---------- pricing categories ---------- */
+/* A category's small label above its heading. */
+.kicker { margin-bottom: 12px; }
+.section-head-stack .kicker { margin-top: 0; }
+/* Marketing pricing's heading carries a label, so line the estimator up
+   with the heading's foot rather than the label's baseline. */
+#pricing > .wrap > .section-head { align-items: flex-end; }
+
+/* The tour comparison is part of marketing pricing: ruled off within the
+   section, not across the page like a new category. */
+.compare-block { margin-top: clamp(56px, 8vw, 88px); padding-top: clamp(40px, 6vw, 64px); border-top: 1px solid var(--border); }
+.subhead { font-size: clamp(24px, 3vw, 32px); }
+
 /* ---------- tour comparison ---------- */
 .section-head-stack { display: block; }
 .section-head-stack p { margin-top: 12px; max-width: 40em; }
@@ -297,7 +310,9 @@ nav a:hover { color: var(--text); }
 /* Price and its note travel together, so every card's price sits on the same
    line whether or not it has a note beneath. */
 .plans-price { margin-top: auto; min-height: 58px; }
-.plans-price .tier-price { margin: 0 0 8px; }
+.plans-price .tier-price { margin: 0 0 8px; flex-wrap: wrap; row-gap: 2px; }
+/* "+ $1.80" stays in one piece; a long unit wraps beneath it instead. */
+.plans-amount { white-space: nowrap; }
 .plans-amount { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
 #plans .pricing-note { margin-bottom: 24px; }
 
@@ -375,7 +390,7 @@ nav a:hover { color: var(--text); }
   :root { --gutter: 20px; }
   .m-only { display: block; }
   /* The package list stands in for these three. */
-  #pricing, #compare, #plans { display: none; }
+  #pricing, #plans { display: none; }
 
   .section { padding: 40px 0; border-top: 0; }
   #work + #contact { border-top: 1px solid var(--border); }
@@ -383,6 +398,13 @@ nav a:hover { color: var(--text); }
   .section-head-stack p { display: none; }
   .section-head h2, .m-heading, .contact h2 { font-size: 26px; }
   .m-heading { margin-bottom: 16px; }
+  .kicker { font-size: 12px; margin-bottom: 8px; }
+  .m-group + .m-group { margin-top: 48px; }
+  /* Schematic plan pricing: one card, every line visible. */
+  .plan-list { padding: 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
+  .plan-list .svc-addons li:first-child { padding-top: 0; }
+  .plan-list .svc-addons li > span:first-child small { display: block; font-size: 12.5px; color: var(--accent); font-weight: 600; }
+  .plan-list .fine { margin: 0 0 16px; }
   .fine { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 14px 0 0; }
 
   /* Header: the name and one button. */

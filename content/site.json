@@ -5,6 +5,8 @@
   "tagline": "3D tours and schematic plans.",
   "intro": "3D tours and marketing plans for listings, and schematic plans for renovations and additions. Every marketing plan and schematic plan is drafted by a Drexel-trained architectural designer.",
   "ctaLabel": "Book a scan",
+  "pricingKicker": "For listings",
+  "pricingHeading": "Marketing pricing",
   "tiers": [
     {
       "name": "Basic",
@@ -92,7 +94,8 @@
     "both": "Complete gets you both: the Zillow tour for your Zillow listing, and the branded tour for everywhere else."
   },
   "plans": {
-    "heading": "Schematic plans",
+    "kicker": "For renovations and additions",
+    "heading": "Schematic plan pricing",
     "intro": "More than a virtual tour. The same scan becomes a schematic plan of the building as it stands, ready for a renovation, an addition, or an architect to design from.",
     "name": "Existing conditions",
     "includes": "A dimensioned schematic plan of every level, drawn from the scan.",
