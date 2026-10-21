@@ -62,11 +62,12 @@ const mailto = email ? `mailto:${email}?subject=${encodeURIComponent("Scan enqui
 
 // A floor plan being scanned: the mark of the business, drawn rather than
 // photographed so the page looks finished before there is any work to show.
-// js/main.js brings it to life: the logo's eye comes in through the front
-// opening, goes room to room through the doorways, sends out dotted lines of
-// sight, and each room's walls build in as it's scanned. Then it moves in:
-// furniture, measurements, TV, dinner, dancing, and finally bed, where it
-// stays. Each room's walls are revealed by a circle growing from the eye,
+// js/main.js brings it to life: the logo's eye comes in through the side
+// door, goes room to room through the doorways, sends out dotted lines of
+// sight, and each room's walls build in as it's scanned. Then it moves in,
+// furnishes the place, measures up, and welcomes its family; a whole evening
+// and night later, it ends the next morning with everyone awake on the big
+// bed. Each room's walls are revealed by a circle growing from the eye,
 // clipped to that room (with a little extra, so the walls on its edges come
 // too). Without JavaScript, or with reduced motion, it's simply the finished,
 // furnished plan.
@@ -74,17 +75,22 @@ const mailto = email ? `mailto:${email}?subject=${encodeURIComponent("Scan enqui
 // Rooms are listed in the order the eye scans them; doors join two rooms
 // (by index) at a point on the wall between them.
 const PLAN_ROOMS = [
-  { x: 200, y: 20, w: 130, h: 180 }, // bathroom, entered from outside at the top
-  { x: 20, y: 20, w: 180, h: 180 }, // bedroom
-  { x: 20, y: 200, w: 280, h: 140 }, // living room
-  { x: 300, y: 200, w: 160, h: 140 }, // dining
+  { x: 300, y: 200, w: 160, h: 140 }, // dining, entered from outside by the side door
   { x: 330, y: 20, w: 130, h: 180 }, // kitchen
+  { x: 20, y: 200, w: 280, h: 140 }, // living room
+  { x: 200, y: 90, w: 130, h: 110 }, // kids' room
+  { x: 200, y: 20, w: 130, h: 70 }, // bathroom, between the two bedrooms
+  { x: 20, y: 20, w: 180, h: 180 }, // bedroom
 ];
 const PLAN_DOORS = [
-  [0, 1, 200, 125],
-  [1, 2, 105, 200],
-  [2, 3, 300, 275],
-  [3, 4, 345, 200],
+  [0, 1, 345, 200],
+  [0, 2, 300, 225],
+  // Kids' room to bathroom listed before kids' room to living room, so the
+  // way from the kids' room to the big bedroom is through the bathroom.
+  [3, 4, 265, 90],
+  [2, 3, 250, 200],
+  [4, 5, 200, 55],
+  [5, 2, 105, 200],
 ];
 // Furniture, as simple outlines. Hidden while the eye is still to place it.
 const PLAN_ITEMS = {
@@ -94,9 +100,11 @@ const PLAN_ITEMS = {
   tv: '<rect x="150" y="208" width="80" height="10" rx="2"/><rect class="plan-screen" x="153" y="210" width="74" height="6" rx="1"/>',
   sofa: '<rect x="70" y="300" width="120" height="26" rx="6"/><path d="M76 312 H184"/><rect x="62" y="296" width="12" height="32" rx="4"/><rect x="186" y="296" width="12" height="32" rx="4"/>',
   speaker: '<rect x="34" y="214" width="20" height="28" rx="3"/><circle cx="44" cy="233" r="5"/><circle cx="44" cy="221" r="2"/>',
+  // Two little beds against the side walls, clear of both doorways.
+  kidbeds: '<rect x="208" y="100" width="34" height="58" rx="4"/><rect x="213" y="105" width="24" height="11" rx="3"/><rect x="288" y="100" width="34" height="58" rx="4"/><rect x="293" y="105" width="24" height="11" rx="3"/>',
+  sink: '<rect x="214" y="26" width="48" height="16" rx="3"/><circle cx="226" cy="34" r="4.5"/><circle cx="250" cy="34" r="4.5"/>',
+  tub: '<rect x="288" y="27" width="34" height="56" rx="12"/><circle cx="305" cy="75" r="3"/>',
   bed: '<rect x="36" y="36" width="84" height="110" rx="4"/><rect x="44" y="44" width="30" height="16" rx="3"/><rect x="82" y="44" width="30" height="16" rx="3"/><path d="M36 72 H120"/>',
-  // Along the bathroom's bottom wall, clear of the way to the bedroom door.
-  tub: '<rect x="250" y="150" width="70" height="40" rx="14"/><circle cx="262" cy="170" r="3"/>',
 };
 const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focusable="false" data-plan data-rooms='${JSON.stringify(PLAN_ROOMS)}' data-doors='${JSON.stringify(PLAN_DOORS)}'>
   <defs>
@@ -106,9 +114,9 @@ const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focu
     </mask>
   </defs>
   <g class="plan-walls">
-    <path d="M20 20 H300 M330 20 H460 V200 M460 230 V340 H20 V20"/>
-    <path d="M200 20 V110 M200 140 V200 M20 200 H90 M120 200 H300 V260 M300 290 V340 M300 200 H330 V20"/>
-    <path d="M360 200 H460"/>
+    <path d="M20 20 H460 V205 M460 240 V340 H20 V20"/>
+    <path d="M200 20 V40 M200 70 V200 M20 200 H90 M120 200 H235 M265 200 H330 V20 M300 200 V210 M300 240 V340"/>
+    <path d="M200 90 H250 M280 90 H330 M360 200 H460"/>
   </g>
   <g class="plan-items">
     ${Object.entries(PLAN_ITEMS).map(([name, d]) => `<g class="plan-item" data-item="${name}">${d}</g>`).join("\n    ")}
@@ -116,7 +124,7 @@ const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focu
   <g class="plan-marks"></g>
   <g class="plan-rays"></g>
   <g class="plan-fx"></g>
-  <g class="plan-eye" transform="translate(78 100) scale(1 0.15)">
+  <g class="plan-eye" transform="translate(62 100) scale(1 1)">
     <circle class="plan-eye-ball" r="10"/>
     <circle class="plan-eye-pupil" r="3.6"/>
   </g>

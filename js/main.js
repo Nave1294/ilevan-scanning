@@ -282,15 +282,24 @@ const character = (svg, { roam } = {}) => {
   const GROUND = 1752 - 155 - 158;
   const FAR_WALL = 835;
   const GAP = { mid: 290, leftWall: 265, rightWall: 315 };
+  // Where it lands hopping down outside a letter (further out on the i's
+  // side when there's a hoop on it).
   const OUTSIDE = { i: -268, l: 845 };
 
-  // ---- The yard: props on the ground, when there's room to roam ----
-  // A crate on the left, a bench on the right, and a ball, in the drawing's
-  // units, placed once the eye first starts and the screen's width is known.
-  // Positions are the x range of each footprint; the eye's x offset is also
-  // its left edge, so it overlaps something when x + 310 > x0 and x < x1.
-  const FLOOR = 1752, BALL_R = 110;
-  let props = [], ball = null;
+  // ---- The yard: things on the ground, when there's room to roam ----
+  // Set out once the eye first starts and the screen's width is known, in
+  // the drawing's units. On the i's side: a basketball hoop hung on the i
+  // and its ball, a crate, and a patch of ice with a fishing hole. On the
+  // l's side: a football and, at the far end, three bowling pins. Narrower
+  // screens get what fits, from the letters outward. Footprints are x
+  // ranges; the eye's x offset is its left edge, so it overlaps something
+  // when x + 310 > x0 and x < x1.
+  const FLOOR = 1752;
+  let props = [], balls = [], ball = null, bball = null, hoop = null, ice = null, pins = null, gear = null, fish = null;
+  // How far the eye goes on a run: inside the column, short of the ice and
+  // the bowling lane.
+  let walk = null;
+  let yard = null;
   const SVGNS = "http://www.w3.org/2000/svg";
   const draw = (tag, attrs, parent) => {
     const el = document.createElementNS(SVGNS, tag);
@@ -298,88 +307,168 @@ const character = (svg, { roam } = {}) => {
     parent.append(el);
     return el;
   };
+  // Balls, the fish and the pins are drawn about their own origin and put
+  // in place with a transform, so they can move, spin and fall over.
+  const pose = (x, y, spin = 0) => `translate(${x}px, ${y}px) rotate(${spin}deg)`;
+  const put = (o) => (o.el.style.transform = pose(o.x, o.y, o.spin));
+  const makeBall = (layer, cls, x, r, seams, range) => {
+    const el = draw("g", { class: `ilv-ball ${cls}` }, layer);
+    draw("circle", { cx: 0, cy: 0, r }, el);
+    draw("path", { d: seams }, el);
+    const b = { el, x, y: FLOOR - r, r, spin: 0, lo: range[0] + r, hi: range[1] - r, carried: false };
+    put(b);
+    balls.push(b);
+    return b;
+  };
+
   const setUpYard = () => {
     const { left, right } = roam();
-    const layer = draw("g", { class: "ilv-yard" }, svg);
-    svg.insertBefore(layer, svg.querySelector("g"));
-    // Each side's stretch of ground, kept clear of where the eye lands when
-    // it hops down off a letter.
-    const zones = {
-      [-1]: [left, OUTSIDE.i - 120],
-      [1]: [OUTSIDE.l + 310 + 120, right + 310],
-    };
-    const along = ([a, b], f) => a + (b - a) * f;
-    const room = (side) => zones[side][1] - zones[side][0];
-    if (room(-1) > 1500) {
-      const x0 = along(zones[-1], 0.4), top = FLOOR - 300;
-      props.push({ x0, x1: x0 + 300, top });
-      const g = draw("g", { class: "ilv-prop" }, layer);
+    const letters = svg.querySelector(":scope > g");
+    const layer = () => svg.insertBefore(draw("g", { class: "ilv-yard" }, svg), letters);
+    // Behind the balls, the balls (and the fish), and in front of them.
+    yard = { back: layer(), mid: layer(), front: layer() };
+
+    // The i's side. With room, the hoop goes on the i, and the eye hops
+    // down further out so it never drops through the rim.
+    if (OUTSIDE.i - 120 - left > 1500) {
+      OUTSIDE.i = -560;
+      const y = 1060, x0 = -215, x1 = 40;
+      draw("rect", { class: "ilv-board", x: 18, y: y - 300, width: 40, height: 360, rx: 6 }, yard.back);
+      draw("path", { class: "ilv-board", d: `M52 ${y - 130} L14 ${y}` }, yard.back);
+      const tops = [-205, -127, -48, 30], bottoms = [-168, -112, -58, -4], h = 180;
+      const net = draw("path", {
+        class: "ilv-net",
+        d: [`M${tops[0]} ${y} L${bottoms[0]} ${y + h}`, `M${tops[3]} ${y} L${bottoms[3]} ${y + h}`,
+          ...tops.slice(0, 3).map((t, k) => `M${t} ${y} L${bottoms[k + 1]} ${y + h} M${tops[k + 1]} ${y} L${bottoms[k]} ${y + h}`)].join(" "),
+      }, yard.front);
+      net.style.transformOrigin = `${(x0 + x1) / 2}px ${y}px`;
+      const rim = draw("line", { class: "ilv-rim", x1: x0, y1: y, x2: x1, y2: y }, yard.front);
+      hoop = { x: (x0 + x1) / 2, x0, y, net, rim };
+    }
+    const L = [left, OUTSIDE.i - 120];
+    const room = L[1] - L[0];
+    if (room > 1700) {
+      const x0 = L[1] - 1270, x1 = x0 + 300, top = FLOOR - 300;
+      props.push({ x0, x1, top });
+      const g = draw("g", { class: "ilv-prop" }, yard.back);
       draw("rect", { x: x0, y: top, width: 300, height: 300, rx: 14 }, g);
       draw("path", { d: `M${x0 + 30} ${top + 30} L${x0 + 270} ${FLOOR - 30} M${x0 + 270} ${top + 30} L${x0 + 30} ${FLOOR - 30}` }, g);
     }
-    if (room(1) > 1800) {
-      const x0 = along(zones[1], 0.5), top = FLOOR - 190;
-      props.push({ x0, x1: x0 + 620, top });
-      const g = draw("g", { class: "ilv-prop" }, layer);
-      draw("rect", { x: x0, y: top, width: 620, height: 56, rx: 18 }, g);
-      draw("path", { d: `M${x0 + 70} ${top + 56} V${FLOOR} M${x0 + 550} ${top + 56} V${FLOOR}` }, g);
+    if (room > 2400) {
+      const x = L[0] + 400, rx = 330;
+      const g = draw("g", { class: "ilv-ice" }, yard.back);
+      draw("ellipse", { cx: x, cy: FLOOR, rx, ry: 42 }, g);
+      draw("path", { class: "ilv-crack", d: `M${x - 250} ${FLOOR - 6} l60 10 l40 -8 M${x + 150} ${FLOOR + 14} l50 -10 l50 6` }, g);
+      draw("ellipse", { class: "ilv-hole", cx: x, cy: FLOOR, rx: 82, ry: 17 }, g);
+      ice = { x, x0: x - rx, x1: x + rx };
+      fish = { el: draw("g", { class: "ilv-fish" }, yard.mid), x, y: FLOOR + 40, spin: 0 };
+      draw("ellipse", { cx: 0, cy: 0, rx: 62, ry: 30 }, fish.el);
+      draw("path", { d: "M50 0 L100 -32 L100 32 Z" }, fish.el);
+      draw("circle", { class: "ilv-fish-eye", cx: -30, cy: -6, r: 7 }, fish.el);
+      fish.el.style.opacity = 0;
+      put(fish);
+      // The rod and line ride with the eye, on its float layer, behind it.
+      // The tip sits right over the hole when the eye stands 120 to its right.
+      const tip = { x: -120, y: -160 }, bob = FLOOR - GROUND - 14;
+      const rod = draw("line", { class: "ilv-rod", x1: 70, y1: 210, x2: tip.x, y2: tip.y }, hover);
+      const line = draw("line", { class: "ilv-line", x1: tip.x, y1: tip.y, x2: tip.x, y2: bob }, hover);
+      const bobber = draw("circle", { class: "ilv-bobber", cx: tip.x, cy: bob, r: 22 }, hover);
+      [rod, line, bobber].forEach((el) => hover.insertBefore(el, dot));
+      rod.style.transformOrigin = "70px 210px";
+      rod.style.transform = "scale(0)";
+      line.style.transformOrigin = `${tip.x}px ${tip.y}px`;
+      line.style.transform = "scaleY(0)";
+      bobber.style.opacity = 0;
+      gear = { rod, line, bobber, length: bob - tip.y };
     }
-    // The ball goes on the roomier side, between the letters and its prop.
-    const side = room(1) >= room(-1) ? 1 : -1;
-    if (room(side) > 1100) {
-      const [a, b] = zones[side];
-      const bx = side > 0 ? a + Math.min(700, (b - a) * 0.25) : b - Math.min(700, (b - a) * 0.25);
-      const g = draw("g", { class: "ilv-ball" }, layer);
-      draw("circle", { cx: bx, cy: FLOOR - BALL_R, r: BALL_R }, g);
-      draw("path", { d: `M${bx - BALL_R} ${FLOOR - BALL_R} Q${bx} ${FLOOR - BALL_R - 70} ${bx + BALL_R} ${FLOOR - BALL_R} M${bx} ${FLOOR - 2 * BALL_R} Q${bx + 60} ${FLOOR - BALL_R} ${bx} ${FLOOR}` }, g);
-      ball = { el: g, x: bx, x0: bx, spin: 0, side, zone: zones[side] };
+    if (hoop) {
+      const r = 95, x = L[1] - 320;
+      bball = makeBall(yard.mid, "ilv-bball", x, r,
+        `M${-r} 0 H${r} M0 ${-r} V${r} M${-0.72 * r} ${-0.69 * r} Q${-0.25 * r} 0 ${-0.72 * r} ${0.69 * r} M${0.72 * r} ${-0.69 * r} Q${0.25 * r} 0 ${0.72 * r} ${0.69 * r}`,
+        [ice ? ice.x1 + 40 : L[0], L[1]]);
+      bball.rest = x;
+      // Where it shoots from: just left of where the ball comes to rest.
+      hoop.spot = x - r - 310 - 8;
     }
+
+    // The l's side: the bowling lane at the far end, and the football
+    // between it and the letters, kept clear of the lane.
+    const R = [OUTSIDE.l + 310 + 120, right + 310];
+    if (R[1] - R[0] > 2300) {
+      const x0 = R[1] - 500, xs = [x0, x0 + 105, x0 + 210];
+      const els = xs.map((x) => {
+        const el = draw("g", { class: "ilv-pin" }, yard.back);
+        // About its base's right-hand corner, so it topples to the right.
+        const c = -18;
+        draw("path", { d: `M${c - 18} 0 C${c - 40} -50 ${c - 40} -110 ${c - 20} -145 C${c - 12} -160 ${c - 13} -178 ${c - 15} -192 C${c - 18} -222 ${c + 18} -222 ${c + 15} -192 C${c + 13} -178 ${c + 12} -160 ${c + 20} -145 C${c + 40} -110 ${c + 40} -50 ${c + 18} 0 Z` }, el);
+        draw("path", { class: "ilv-stripe", d: `M${c - 13} -168 H${c + 13}` }, el);
+        el.style.transform = pose(x + 18, FLOOR);
+        return el;
+      });
+      pins = { xs, els, start: x0 - 1040 };
+    }
+    if (R[1] - R[0] > 1100) {
+      const r = 110, x = R[0] + Math.min(500, (R[1] - R[0]) * 0.25);
+      ball = makeBall(yard.mid, "ilv-football", x, r, `M${-r} 0 Q0 -70 ${r} 0 M0 ${-r} Q60 0 0 ${r}`,
+        [R[0] + 150, pins ? pins.start - 340 : R[1] - 450]);
+      ball.kick = true;
+    }
+    walk = { left: ice ? Math.max(left, ice.x1 + 40) : left, right: pins ? Math.min(right, pins.start) : right };
   };
 
   const propAt = (x) => props.find((p) => x + 310 > p.x0 && x < p.x1);
   const onTopOf = (p) => p.top - 155 - 158;
   const onGround = () => cy >= GROUND - 5;
-  const hitsBall = (x) => ball && x + 310 > ball.x - BALL_R && x < ball.x + BALL_R;
+  const ballAt = (x) => balls.find((b) => !b.carried && x + 310 > b.x - b.r && x < b.x + b.r);
 
-  // Rolling the ball: away it goes, spinning, until it nears the edge of
-  // its stretch of ground or meets a prop.
-  const roll = async (dir, distance) => {
-    const [a, b] = ball.zone;
-    let to = ball.x + dir * distance;
-    to = Math.max(a + BALL_R + 450, Math.min(b - BALL_R - 450, to));
+  // Rolling a ball: away it goes, spinning, until it nears the end of its
+  // stretch of ground or meets a prop.
+  const roll = async (b, dir, distance) => {
+    let to = Math.max(b.lo, Math.min(b.hi, b.x + dir * distance));
     for (const p of props) {
-      if (dir > 0 && p.x0 >= ball.x + BALL_R) to = Math.min(to, p.x0 - BALL_R);
-      if (dir < 0 && p.x1 <= ball.x - BALL_R) to = Math.max(to, p.x1 + BALL_R);
+      if (dir > 0 && p.x0 >= b.x + b.r) to = Math.min(to, p.x0 - b.r);
+      if (dir < 0 && p.x1 <= b.x - b.r) to = Math.max(to, p.x1 + b.r);
     }
-    const moved = to - ball.x;
+    const moved = to - b.x;
     if (Math.abs(moved) < 40) return false;
-    const spin = ball.spin + (moved / BALL_R) * (180 / Math.PI);
-    await play(ball.el, [
-      { transform: `translateX(${ball.x - ball.x0}px) rotate(${ball.spin}deg)` },
-      { transform: `translateX(${to - ball.x0}px) rotate(${spin}deg)` },
-    ], { duration: 450 + Math.abs(moved) * 0.6, easing: "cubic-bezier(0.15, 0.7, 0.3, 1)" });
-    ball.x = to;
-    ball.spin = spin;
+    const spin = b.spin + (moved / b.r) * (180 / Math.PI);
+    await play(b.el, [{ transform: pose(b.x, b.y, b.spin) }, { transform: pose(to, b.y, spin) }], { duration: 450 + Math.abs(moved) * 0.6, easing: "cubic-bezier(0.15, 0.7, 0.3, 1)" });
+    b.x = to;
+    b.spin = spin;
     return true;
   };
+  // Through the air to (x, y) over a peak, as under gravity, turning as it
+  // goes. Works for anything posed with put(): balls, the fish.
+  const toss = (o, x, y, peak, ms, turn = 0) => {
+    const x0 = o.x, y0 = o.y, s0 = o.spin;
+    const up = Math.sqrt(Math.max(0, y0 - peak)), down = Math.sqrt(Math.max(0, y - peak));
+    const tp = up / (up + down || 1);
+    const frames = Array.from({ length: 21 }, (_, k) => {
+      const t = k / 20;
+      const h = t < tp ? peak + (y0 - peak) * ((tp - t) / tp) ** 2 : peak + (y - peak) * ((t - tp) / (1 - tp || 1)) ** 2;
+      return { transform: pose(x0 + (x - x0) * t, h, s0 + turn * t) };
+    });
+    Object.assign(o, { x, y, spin: s0 + turn });
+    return play(o.el, frames, { duration: ms, easing: "linear" });
+  };
   // A kick: a lunge at the ball as it rolls off.
-  const kick = (dir, distance = rand(700, 1300)) => {
+  const kick = (b, dir, distance = rand(700, 1300)) => {
     fromBase();
     return Promise.all([
       play(dot, [{ transform: "none" }, { transform: `translateX(${dir * 50}px) scale(1.16, 0.86)`, offset: 0.35 }, { transform: "none" }], { duration: 360, easing: "ease-out" }),
-      sleep(110).then(() => roll(dir, distance)),
+      sleep(110).then(() => roll(b, dir, distance)),
     ]);
   };
-  // Over the ball, landing on the ground or a prop beyond it.
-  const hopOver = async (dir) => {
-    const x = dir > 0 ? ball.x + BALL_R + 20 : ball.x - BALL_R - 310 - 20;
+  // Over a ball, landing on the ground or a prop beyond it.
+  const hopOver = async (b, dir) => {
+    const x = dir > 0 ? b.x + b.r + 20 : b.x - b.r - 310 - 20;
     const p = propAt(x);
     await leap(x, p ? onTopOf(p) : GROUND, { rise: 230, ms: 620, crouch: true });
   };
 
   // Moving along the ground to x: up onto a prop in the way, along its top,
-  // down off the far end, and the ball knocked ahead or hopped over. Steps
-  // never overshoot x.
+  // down off the far end, and a ball knocked ahead (the football) or hopped
+  // over (the basketball). Steps never overshoot x.
   const moveTo = async (x, ms = 230, length = 260) => {
     for (let guard = 0; guard < 300 && Math.abs(x - cx) > 2; guard++) {
       const dir = Math.sign(x - cx);
@@ -396,39 +485,216 @@ const character = (svg, { roam } = {}) => {
         await leap(next, GROUND, { rise: 100, ms: 480, crouch: false });
         continue;
       }
-      if (onGround() && hitsBall(next)) {
-        if (!(await kick(dir, rand(500, 900)))[1]) await hopOver(dir);
+      const b = onGround() && ballAt(next);
+      if (b) {
+        if (!(b.kick && (await kick(b, dir, rand(500, 900)))[1])) await hopOver(b, dir);
         continue;
       }
       await stride(next, ms);
     }
   };
 
+  // A ball on the eye's head: it rides along on the float layer, sitting
+  // just into the top of the eye.
+  const carry = (b) => {
+    b.carried = true;
+    hover.insertBefore(b.el, dot);
+    Object.assign(b, { x: 155, y: 9 - b.r });
+    put(b);
+  };
+  const letGo = (b) => {
+    b.carried = false;
+    yard.mid.append(b.el);
+    Object.assign(b, { x: cx + 155, y: cy + 9 - b.r });
+    put(b);
+  };
+  // Flicked up off the ground and caught on its head.
+  const scoop = async (b) => {
+    fromBase();
+    await play(dot, [{ transform: "none" }, { transform: "scale(1.15, 0.85)" }], { duration: 200, easing: "ease-out" });
+    const x = cx + 155, y = cy + 9 - b.r;
+    await Promise.all([
+      play(dot, [{ transform: "scale(1.15, 0.85)" }, { transform: "scale(0.9, 1.1)", offset: 0.3 }, { transform: "none" }], { duration: 500 }),
+      toss(b, x, y, y - 380, 700, Math.sign(x - b.x) * 200),
+    ]);
+    carry(b);
+    await squash();
+  };
+  // Keepy-uppy on its head.
+  const headers = async (b, n) => {
+    for (let k = 0; k < n; k++) {
+      fromBase();
+      await Promise.all([
+        play(dot, [{ transform: "none" }, { transform: "scale(1.12, 0.88)", offset: 0.12 }, { transform: "scale(0.94, 1.06)", offset: 0.25 }, { transform: "none", offset: 0.45 }, { transform: "none", offset: 0.9 }, { transform: "scale(1.08, 0.92)" }], { duration: 700 }),
+        toss(b, b.x, b.y, b.y - 220, 700, 120),
+      ]);
+    }
+    await squash();
+  };
+  // A little celebration on the spot: pupil wide, two or three bounces.
+  const cheer = async (n = 2) => {
+    await play(pupil, [{ transform: pupil.style.transform || "none" }, { transform: look(0, -14, " scale(1.4)") }], { duration: 250 });
+    for (let k = 0; k < n; k++) await leap(cx, cy, { rise: 160, ms: 420, crouch: k === 0 });
+    await play(pupil, [{ transform: look(0, -14, " scale(1.4)") }, { transform: "none" }], { duration: 250 });
+  };
+  // Aww: a sag, eyes down.
+  const aww = () => {
+    fromBase();
+    return Promise.all([
+      play(pupil, [{ transform: pupil.style.transform || "none" }, { transform: look(0, 42), offset: 0.3 }, { transform: look(0, 42), offset: 0.8 }, { transform: "none" }], { duration: 1600, easing: "ease-in-out" }),
+      play(dot, [{ transform: "none" }, { transform: "scale(1.08, 0.82)", offset: 0.35 }, { transform: "scale(1.08, 0.82)", offset: 0.8 }, { transform: "none" }], { duration: 1600, easing: "ease-in-out" }),
+    ]);
+  };
+  // Down off a letter to the ground outside it, and back up.
+  const hopDown = async (perch) => {
+    if (on !== perch) await jump();
+    await eyeOpen();
+    await lookTo((perch === "i" ? -1 : 1) * REACH, 45, 400);
+    await leap(OUTSIDE[perch], GROUND, { rise: 120, ms: 820, across: "early" });
+  };
+  const goHome = async (perch) => {
+    await lookTo((perch === "i" ? 1 : -1) * REACH, 0, 250);
+    await moveTo(OUTSIDE[perch], 230);
+    await lookTo(0, -REACH, 400);
+    await sleep(250);
+    await leap(PERCH[perch].x, PERCH[perch].y, { rise: 180, ms: 950, across: "late", arrive: onto(perch) });
+    on = perch;
+    await lookTo(0, 0, 400);
+    await sleep(250);
+    await eyeClose();
+  };
+  // A shot at the hoop from the eye's head, as it springs: in, or off the
+  // front of the rim. Either way the ball rolls back out to where it rests.
+  const shoot = async (score) => {
+    const b = bball;
+    fromBase();
+    await play(dot, [{ transform: "none" }, { transform: "scale(1.18, 0.82)" }], { duration: 260, easing: "ease-out" });
+    letGo(b);
+    const spring = leap(cx, cy, { rise: 170, ms: 560, crouch: false });
+    if (score) {
+      await toss(b, hoop.x, hoop.y - b.r - 30, hoop.y - 620, 1150, 330);
+      const fall = toss(b, hoop.x, FLOOR - b.r, hoop.y - b.r - 30, 520, 40);
+      await sleep(140);
+      play(hoop.net, [{ transform: "none" }, { transform: "scaleY(1.22)", offset: 0.3 }, { transform: "scaleY(0.92)", offset: 0.65 }, { transform: "none" }], { duration: 650, easing: "ease-out" });
+      await fall;
+      await toss(b, hoop.x - 170, FLOOR - b.r, FLOOR - b.r - 330, 560, -100);
+      await toss(b, hoop.x - 280, FLOOR - b.r, FLOOR - b.r - 120, 340, -60);
+    } else {
+      const lip = { x: hoop.x0 - b.r * 0.75, y: hoop.y - b.r * 0.7 };
+      await toss(b, lip.x, lip.y, hoop.y - 560, 1050, 330);
+      play(hoop.rim, [{ transform: "none" }, { transform: "translateY(16px)", offset: 0.2 }, { transform: "translateY(-8px)", offset: 0.5 }, { transform: "none" }], { duration: 400 });
+      await toss(b, lip.x - 300, FLOOR - b.r, lip.y - 140, 720, -140);
+      await toss(b, lip.x - 470, FLOOR - b.r, FLOOR - b.r - 220, 460, -90);
+    }
+    await spring;
+    await roll(b, -1, b.x - b.rest);
+  };
+  // The fishing line: the bobber dips by d, the line stretching with it.
+  const dip = (d, ms, frames = 1) => {
+    const len = (v) => `scaleY(${((gear.length + v) / gear.length).toFixed(3)})`;
+    const ds = Array.from({ length: frames * 2 + 1 }, (_, k) => (k % 2 ? d : 0));
+    return Promise.all([
+      play(gear.bobber, ds.map((v) => ({ transform: `translateY(${v}px)` })), { duration: ms, easing: "ease-in-out" }),
+      play(gear.line, ds.map((v) => ({ transform: len(v) })), { duration: ms, easing: "ease-in-out" }),
+    ]);
+  };
+  const lean = (dx, ms) => play(X, [{ transform: tx(cx) }, { transform: tx(cx + dx) }, { transform: tx(cx) }], { duration: ms, easing: "ease-in-out" });
+  // Pins down, staggered, each sliding a little as it goes; and back up.
+  const knockDown = () => Promise.all(pins.els.map((el, k) => sleep(k * 110).then(() => {
+    const x = pins.xs[k] + 18, to = x + 40 + k * 25;
+    return play(el, [{ transform: pose(x, FLOOR) }, { transform: pose(to, FLOOR, 98), offset: 0.75 }, { transform: pose(to, FLOOR, 90) }], { duration: 560, easing: "ease-in" });
+  })));
+  const standUp = (k) => {
+    const x = pins.xs[k] + 18;
+    return play(pins.els[k], [{ transform: pins.els[k].style.transform }, { transform: pose(x, FLOOR, -8), offset: 0.7 }, { transform: pose(x, FLOOR) }], { duration: 520, easing: "ease-out" });
+  };
+
+  // ---- The story: at first, the ground is too scary ----
+  // On the roaming strip the eye starts out timid. It peers over the far
+  // side of the l and climbs down a little, and a fright sends it back up;
+  // the next time it gets further; then it takes a deep breath and goes all
+  // the way down, finds nothing bad happens, and only then do the games
+  // come into play. The booking page's loader is brave from the start.
+  let brave = !roam, nerve = 0;
+  const fright = async (depth) => {
+    if (on !== "l") await jump();
+    await eyeOpen();
+    await lookTo(REACH, 40, 600);
+    await sleep(500);
+    await leap(FAR_WALL, -58, { rise: 120, ms: 620, across: "early", arrive: { wall: -1 } });
+    await lookTo(0, 50, 300);
+    const down = [142, 342, 542].slice(0, depth);
+    for (const y of down) {
+      await step(FAR_WALL, y, 520);
+      await sleep(rand(180, 380));
+    }
+    await lookTo(0, 55, 500);
+    await sleep(400);
+    // Too far: a fright, then up and out as fast as it can go.
+    await Promise.all([play(pupil, [{ transform: look(0, 55) }, { transform: look(0, -20, " scale(0.35)") }], { duration: 160, easing: "ease-out" }), tremble(900)]);
+    for (const y of [...down.slice(0, -1).reverse(), -58]) await step(FAR_WALL, y, 220);
+    await leap(PERCH.l.x, PERCH.l.y, { rise: 160, ms: 560, across: "late", arrive: onto("l") });
+    on = "l";
+    await lookTo(0, 0, 500);
+    await sleep(300);
+    await eyeClose();
+  };
+  const courage = async () => {
+    if (on !== "l") await jump();
+    await eyeOpen();
+    await lookTo(REACH, 50, 600);
+    await sleep(700);
+    // A deep breath, then another, and a determined look.
+    fromBase();
+    for (let k = 0; k < 2; k++) await play(dot, [{ transform: "none" }, { transform: "scale(1.08, 1.1)", offset: 0.5 }, { transform: "none" }], { duration: 1000, easing: "ease-in-out" });
+    await play(pupil, [{ transform: pupil.style.transform || "none" }, { transform: look(0, 20, " scale(0.8)") }], { duration: 300 });
+    await sleep(400);
+    await leap(FAR_WALL, -58, { rise: 120, ms: 620, across: "early", arrive: { wall: -1 } });
+    await lookTo(0, 50, 300);
+    for (const y of [142, 342, 542]) {
+      await step(FAR_WALL, y, 560);
+      await sleep(rand(200, 400));
+    }
+    // Where it turned back before: a wobble, and on it goes.
+    await lookTo(0, 55, 400);
+    await tremble(500);
+    await sleep(600);
+    for (const y of [742, 942, 1142, 1342]) {
+      await step(FAR_WALL, y, 480);
+      await sleep(rand(150, 300));
+    }
+    await leap(OUTSIDE.l, GROUND, { rise: 30, ms: 320, crouch: false });
+    // Made it, and nothing bad happens.
+    await lookTo(0, 45, 400);
+    await sleep(900);
+    await MOODS.lookAround();
+    await cheer(3);
+    brave = true;
+    // And there's a ball.
+    if (ball) {
+      await lookTo(REACH, 10, 300);
+      await sleep(500);
+      await moveTo(ball.x - ball.r - 310 - 6, 260);
+      await sleep(400);
+      await kick(ball, 1, 300);
+      await sleep(400);
+      await cheer(2);
+    }
+    await goHome("l");
+  };
+  const story = () => {
+    const chapter = [() => fright(1), () => fright(3), courage][Math.min(nerve, 2)];
+    nerve++;
+    svg.dataset.adventure = ["fright1", "fright3", "courage"][Math.min(nerve - 1, 2)];
+    return chapter().finally(() => delete svg.dataset.adventure);
+  };
+
   const ADVENTURES = {
     // Over the edge of the l: a peek, a climb down the far side, a fright,
-    // and a scramble back up.
+    // and a scramble back up. The loader's; on the strip it's the story.
     farSide: {
-      when: () => on === "l",
-      run: async () => {
-        await eyeOpen();
-        await lookTo(REACH, 40, 600);
-        await sleep(500);
-        await leap(FAR_WALL, -58, { rise: 120, ms: 620, across: "early", arrive: { wall: -1 } });
-        await lookTo(0, 50, 300);
-        for (const y of [142, 342, 542]) {
-          await step(FAR_WALL, y, 520);
-          await sleep(rand(180, 380));
-        }
-        await lookTo(0, 55, 500);
-        await sleep(400);
-        // Too far: a fright, then up and out as fast as it can go.
-        await Promise.all([play(pupil, [{ transform: look(0, 55) }, { transform: look(0, -20, " scale(0.35)") }], { duration: 160, easing: "ease-out" }), tremble(900)]);
-        for (const y of [342, 142, -58]) await step(FAR_WALL, y, 220);
-        await leap(PERCH.l.x, PERCH.l.y, { rise: 160, ms: 560, across: "late", arrive: onto("l") });
-        await lookTo(0, 0, 500);
-        await sleep(300);
-        await eyeClose();
-      },
+      when: () => on === "l" && !roam,
+      run: () => fright(3),
     },
 
     // Down the gap between the letters, then wall-hopping back out.
@@ -458,86 +724,254 @@ const character = (svg, { roam } = {}) => {
       },
     },
 
+    // Hopscotch: back and forth between the letters, quicker and higher
+    // each time, then a dizzy moment.
+    hopscotch: {
+      when: () => true,
+      run: async () => {
+        await eyeOpen();
+        for (const [rise, ms] of [[200, 640], [260, 600], [330, 560], [400, 540]]) {
+          const to = on === "i" ? "l" : "i";
+          await lookTo(across() * REACH, -20, 150);
+          await leap(PERCH[to].x, PERCH[to].y, { rise, ms, crouch: rise === 200, arrive: onto(to) });
+          on = to;
+        }
+        await lookTo(0, 0, 200);
+        await MOODS.dizzy();
+        await eyeClose();
+      },
+    },
+
+    // Teetering: out to the very edge of the letter it's on, a wobble that
+    // nearly tips it over, arms-out recovery, and back to the middle.
+    teeter: {
+      when: () => true,
+      run: async () => {
+        const p = PERCH[on], out = on === "i" ? -1 : 1, edge = p.x + out * 95;
+        await eyeOpen();
+        await lookTo(out * REACH, 40, 400);
+        await step(edge, p.y, 520);
+        await sleep(300);
+        fromBase();
+        await Promise.all([
+          play(dot, [
+            { transform: "none" }, { transform: `rotate(${out * 14}deg)`, offset: 0.2 }, { transform: `rotate(${-out * 10}deg)`, offset: 0.4 },
+            { transform: `rotate(${out * 22}deg)`, offset: 0.62 }, { transform: `rotate(${-out * 6}deg)`, offset: 0.82 }, { transform: "none" },
+          ], { duration: 2200, easing: "ease-in-out" }),
+          play(pupil, [{ transform: look(out * REACH, 40) }, { transform: look(out * 30, 55, " scale(0.5)"), offset: 0.62 }, { transform: look(0, 0, " scale(0.5)"), offset: 0.8 }, { transform: "none" }], { duration: 2200, easing: "ease-in-out" }),
+        ]);
+        await sleep(200);
+        await step(p.x, p.y, 380);
+        await squash(onto(on));
+        await sleep(300);
+        await eyeClose();
+      },
+    },
+
     // Down to the ground outside a letter, a run off to the side, a look
     // back, a run home and a big leap up.
     groundRun: {
+      ground: true,
       when: () => true,
       run: async () => {
         const home = on, side = on === "i" ? -1 : 1;
-        await eyeOpen();
-        await lookTo(side * REACH, 45, 500);
-        await sleep(300);
-        await leap(OUTSIDE[home], GROUND, { rise: 120, ms: 820, across: "early" });
+        await hopDown(home);
         await lookTo(side * REACH, 0, 300);
-        // How far: a short dash, or with room to roam, anywhere from a third
-        // of the way to nearly the edge of the screen, at a longer stride.
+        // How far: a short dash, or with room to roam, most of the way to
+        // the end of its run, at a longer stride.
         const start = OUTSIDE[home];
-        const edge = roam ? (side < 0 ? roam().left : roam().right) : start + side * 650;
-        const span = Math.max(0, Math.abs(edge - start)) * (roam ? rand(0.6, 0.95) : 1);
+        const edge = roam ? (side < 0 ? walk.left : walk.right) : start + side * 650;
+        const span = Math.max(0, (edge - start) * side) * (roam ? rand(0.6, 0.95) : 1);
         const length = roam ? 260 : 130;
         await moveTo(start + side * span, 230, length);
         await sleep(300);
         await lookTo(-side * REACH, 0, 250);
         await sleep(500);
         await moveTo(start, 230, length);
-        await lookTo(0, -REACH, 400);
-        await sleep(300);
-        await leap(PERCH[home].x, PERCH[home].y, { rise: 180, ms: 950, across: "late", arrive: onto(home) });
-        await lookTo(0, 0, 400);
-        await sleep(250);
-        await eyeClose();
-      },
-    },
-    // With a ball in the yard: down to it, a kick and a chase, a hop over
-    // it, a kick back, a little celebration, and home.
-    kickball: {
-      when: () => !!ball,
-      run: async () => {
-        const side = ball.side, perch = side < 0 ? "i" : "l";
-        if (on !== perch) await jump();
-        await eyeOpen();
-        await lookTo(side * REACH, 45, 400);
-        await leap(OUTSIDE[perch], GROUND, { rise: 120, ms: 820, across: "early" });
-        // Standing just short of the ball, on the side away from `dir`.
-        const behind = (dir) => (dir > 0 ? ball.x - BALL_R - 310 - 6 : ball.x + BALL_R + 6);
-        await lookTo(side * REACH, 10, 250);
-        await moveTo(behind(side), 230);
-        await sleep(rand(200, 500));
-        await kick(side);
-        await sleep(200);
-        await moveTo(behind(side), 230);
-        await lookTo(side * REACH, -REACH, 300);
-        await hopOver(side);
-        await lookTo(-side * REACH, 10, 300);
-        await sleep(400);
-        await kick(-side, rand(500, 900));
-        await sleep(300);
-        // Goal!
-        await play(pupil, [{ transform: pupil.style.transform || "none" }, { transform: look(0, -14, " scale(1.4)") }], { duration: 250 });
-        for (let n = 0; n < 2; n++) await leap(cx, cy, { rise: 160, ms: 420, crouch: n === 0 });
-        await play(pupil, [{ transform: look(0, -14, " scale(1.4)") }, { transform: "none" }], { duration: 250 });
-        await moveTo(OUTSIDE[perch], 230);
-        await lookTo(0, -REACH, 400);
-        await leap(PERCH[perch].x, PERCH[perch].y, { rise: 180, ms: 950, across: "late", arrive: onto(perch) });
-        on = perch;
-        await lookTo(0, 0, 400);
-        await sleep(250);
-        await eyeClose();
+        await goHome(home);
       },
     },
 
-    // With room to roam only: down to the ground, nearly to one edge of the
-    // screen, all the way across to the other, then home.
+    // With a football: down to it, a kick and a chase, a hop over it, a
+    // kick back, a little celebration, and home.
+    kickball: {
+      ground: true,
+      game: true,
+      when: () => !!ball,
+      run: async () => {
+        await hopDown("l");
+        // Standing just short of the ball, on the side away from `dir`.
+        const behind = (dir) => (dir > 0 ? ball.x - ball.r - 310 - 6 : ball.x + ball.r + 6);
+        await lookTo(REACH, 10, 250);
+        await moveTo(behind(1), 230);
+        await sleep(rand(200, 500));
+        await kick(ball, 1);
+        await sleep(200);
+        await moveTo(behind(1), 230);
+        await lookTo(REACH, -REACH, 300);
+        await hopOver(ball, 1);
+        await lookTo(-REACH, 10, 300);
+        await sleep(400);
+        await kick(ball, -1, rand(500, 900));
+        await sleep(300);
+        await cheer(2);
+        await goHome("l");
+      },
+    },
+
+    // Basketball: the ball flicked up onto its head, a couple of headers,
+    // back to its spot, and a shot that rattles off the rim. A sigh, the
+    // ball back on its head, and the second shot drops through the net.
+    basketball: {
+      ground: true,
+      game: true,
+      when: () => !!hoop,
+      run: async () => {
+        const b = bball;
+        await hopDown("i");
+        await lookTo(-REACH, 20, 250);
+        await moveTo(b.x + b.r + 8, 230);
+        await lookTo(-REACH, 30, 250);
+        await sleep(300);
+        await scoop(b);
+        await headers(b, 2);
+        await lookTo(-REACH, 0, 250);
+        await moveTo(hoop.spot, 260);
+        await lookTo(REACH, -45, 500);
+        await sleep(700);
+        await shoot(false);
+        await aww();
+        await sleep(300);
+        await lookTo(REACH, 20, 300);
+        await scoop(b);
+        await lookTo(REACH, -45, 500);
+        // A squint of concentration.
+        fromBase();
+        await play(dot, [{ transform: "none" }, { transform: "scale(1.04, 0.9)" }, { transform: "none" }], { duration: 900, easing: "ease-in-out" });
+        await shoot(true);
+        await cheer(3);
+        await goHome("i");
+      },
+    },
+
+    // Ice fishing: out on the ice by the hole, rod out, line down. A long
+    // wait, a nibble or two, then a bite and a tug of war, and up comes a
+    // fish. Delight, a kind look, and the fish flips back into the hole.
+    fishing: {
+      ground: true,
+      game: true,
+      when: () => !!ice,
+      run: async () => {
+        await hopDown("i");
+        await lookTo(-REACH, 0, 250);
+        await moveTo(ice.x + 120, 230);
+        await lookTo(-REACH, 50, 400);
+        await sleep(400);
+        await play(gear.rod, [{ transform: "scale(0)" }, { transform: "scale(1.08)", offset: 0.7 }, { transform: "none" }], { duration: 450, easing: "ease-out" });
+        await play(gear.line, [{ transform: "scaleY(0)" }, { transform: "none" }], { duration: 650, easing: "ease-in" });
+        await play(gear.bobber, [{ opacity: 0, transform: "scale(0.4)" }, { opacity: 1, transform: "none" }], { duration: 250 });
+        gear.bobber.style.transform = "";
+        // Waiting, eyes drooping.
+        fromBase();
+        await Promise.all([
+          play(pupil, [{ transform: look(-REACH, 50) }, { transform: look(-REACH * 0.6, 58) }], { duration: 2200, easing: "ease-in-out" }),
+          play(dot, [{ transform: "none" }, { transform: "scale(1.05, 0.84)" }], { duration: 2200, easing: "ease-in-out" }),
+        ]);
+        await sleep(900);
+        // A nibble: awake at once. Nothing. Another.
+        for (let k = 0; k < 2; k++) {
+          await Promise.all([dip(16, 360), play(dot, [{ transform: k ? "none" : "scale(1.05, 0.84)" }, { transform: "scale(0.94, 1.08)" }, { transform: "none" }], { duration: 360 })]);
+          await lookTo(-REACH, 55, 150);
+          await sleep(1400);
+        }
+        // A bite! Tug, tug, tug.
+        await Promise.all([dip(50, 1500, 4), tremble(1500), lean(36, 500).then(() => lean(36, 500)).then(() => lean(50, 500))]);
+        // Up it comes.
+        fish.el.style.opacity = 1;
+        await Promise.all([
+          play(gear.rod, [{ transform: "none" }, { transform: "rotate(18deg)" }, { transform: "none" }], { duration: 500, easing: "ease-out" }),
+          play(gear.line, [{ transform: "none" }, { transform: "scaleY(0.25)" }], { duration: 300, easing: "ease-out" }),
+          play(gear.bobber, [{ opacity: 1 }, { opacity: 0 }], { duration: 200 }),
+          toss(fish, ice.x - 210, FLOOR - 30, FLOOR - 700, 900, -360),
+        ]);
+        for (const s of [-24, 18, -10]) await toss(fish, fish.x, fish.y, fish.y - 60, 260, s);
+        await cheer(2);
+        // Better back in the water.
+        await lookTo(-REACH, 30, 400);
+        fromBase();
+        await play(dot, [{ transform: "none" }, { transform: "scale(0.92)", offset: 0.4 }, { transform: "scale(0.92)", offset: 0.7 }, { transform: "none" }], { duration: 1400, easing: "ease-in-out" });
+        await lean(-30, 400);
+        await toss(fish, ice.x, FLOOR + 30, FLOOR - 320, 620, 220);
+        fish.el.style.opacity = 0;
+        const drops = [-60, -20, 30, 70].map((dx) => {
+          const d = { el: draw("circle", { class: "ilv-splash", cx: 0, cy: 0, r: 16 }, yard.mid), x: ice.x, y: FLOOR - 10, spin: 0 };
+          put(d);
+          return toss(d, ice.x + dx * 2.2, FLOOR - 10, FLOOR - 200 - Math.abs(dx), 520).then(() => d.el.remove());
+        });
+        await Promise.all(drops);
+        Object.assign(fish, { x: ice.x, y: FLOOR + 40, spin: 0 });
+        put(fish);
+        await play(gear.line, [{ transform: "scaleY(0.25)" }, { transform: "scaleY(0)" }], { duration: 200 });
+        await play(gear.rod, [{ transform: "none" }, { transform: "scale(0)" }], { duration: 300, easing: "ease-in" });
+        await goHome("i");
+      },
+    },
+
+    // Bowling, with itself as the ball: a look down the lane, a wind-up,
+    // and it rolls (pupil spinning round) into the pins. Strike! A dizzy
+    // moment, a cheer, and the pins stood back up one by one.
+    bowling: {
+      ground: true,
+      game: true,
+      when: () => !!pins,
+      run: async () => {
+        await hopDown("l");
+        await lookTo(REACH, 0, 250);
+        await moveTo(pins.start, 230);
+        await lookTo(REACH, -10, 400);
+        await lean(40, 1400);
+        await sleep(300);
+        fromMiddle();
+        await play(dot, [{ transform: "none" }, { transform: "rotate(-35deg)" }], { duration: 500, easing: "ease-in-out" });
+        await sleep(300);
+        const to = pins.xs[0] - 30 - 310, turn = ((to - cx) / 155) * (180 / Math.PI);
+        const easing = "cubic-bezier(0.45, 0, 0.9, 0.6)";
+        await Promise.all([
+          play(X, [{ transform: tx(cx) }, { transform: tx(to) }], { duration: 1000, easing }),
+          play(dot, [{ transform: "rotate(-35deg)" }, { transform: `rotate(${turn}deg)` }], { duration: 1000, easing }),
+        ]);
+        cx = to;
+        const fall = knockDown();
+        const end = Math.round((turn + 40) / 360) * 360;
+        await Promise.all([
+          play(X, [{ transform: tx(cx) }, { transform: tx(cx + 50) }], { duration: 360, easing: "ease-out" }),
+          play(dot, [{ transform: `rotate(${turn}deg)` }, { transform: `rotate(${end}deg)` }], { duration: 600, easing: "ease-out" }),
+        ]);
+        cx += 50;
+        dot.style.transform = "";
+        await fall;
+        await MOODS.dizzy();
+        await cheer(3);
+        await sleep(400);
+        for (let k = 0; k < pins.els.length; k++) {
+          await lookTo(REACH, 20, 200);
+          await Promise.all([leap(cx, cy, { rise: 90, ms: 360, crouch: false }), sleep(200).then(() => standUp(k))]);
+          await sleep(250);
+        }
+        await goHome("l");
+      },
+    },
+
+    // With room to roam only: down to the ground, nearly to one end of its
+    // run, all the way across to the other, then home.
     crossing: {
+      ground: true,
       when: () => !!roam,
       run: async () => {
         const home = on, side = on === "i" ? -1 : 1, start = OUTSIDE[home], length = 300;
-        const { left, right } = roam();
-        const near = side < 0 ? left : right, far = side < 0 ? right : left;
+        const near = side < 0 ? walk.left : walk.right, far = side < 0 ? walk.right : walk.left;
         const runTo = (x, ms) => moveTo(x, ms, length);
-        await eyeOpen();
-        await lookTo(side * REACH, 45, 400);
-        await leap(start, GROUND, { rise: 120, ms: 820, across: "early" });
+        await hopDown(home);
         await lookTo(side * REACH, 0, 250);
         await runTo(near, 210);
         await sleep(300);
@@ -548,27 +982,30 @@ const character = (svg, { roam } = {}) => {
         await lookTo(side * REACH, 0, 250);
         await sleep(400);
         await runTo(start, 210);
-        await lookTo(0, -REACH, 400);
-        await sleep(250);
-        await leap(PERCH[home].x, PERCH[home].y, { rise: 180, ms: 950, across: "late", arrive: onto(home) });
-        await lookTo(0, 0, 400);
-        await sleep(250);
-        await eyeClose();
+        await goHome(home);
       },
     },
   };
-  let lastAdventure = "";
+  // Never the same twice running, and never two trips along the ground in
+  // a row: they're broken up by something up on the letters (the gap,
+  // hopscotch, teetering), a plain leap, or the moods. Each
+  // game takes its turn before any comes round again, and games come up
+  // more often than plain runs.
+  let lastAdventure = "", played = [];
   const adventure = () => {
-    // Never the same twice running, and never two trips along the ground in
-    // a row: side to side gets broken up by something else.
-    const ground = ["groundRun", "crossing", "kickball"];
-    const names = Object.keys(ADVENTURES).filter(
-      (n) => n !== lastAdventure && ADVENTURES[n].when() && !(ground.includes(n) && ground.includes(lastAdventure))
-    );
+    const A = ADVENTURES, last = A[lastAdventure];
+    if (last?.ground && Math.random() < 0.5) return jump();
+    let names = Object.keys(A).filter((n) => n !== lastAdventure && A[n].when() && !(A[n].ground && last?.ground));
+    const games = names.filter((n) => A[n].game);
+    if (games.length && games.every((n) => played.includes(n))) played = [];
+    names = names.filter((n) => !played.includes(n));
     if (!names.length) return jump();
-    lastAdventure = names[Math.floor(Math.random() * names.length)];
+    const weight = (n) => (A[n].game ? 3 : A[n].ground ? 1 : 2);
+    let pick = Math.random() * names.reduce((s, n) => s + weight(n), 0);
+    lastAdventure = names.find((n) => (pick -= weight(n)) < 0) || names[0];
+    if (A[lastAdventure].game) played.push(lastAdventure);
     svg.dataset.adventure = lastAdventure;
-    return ADVENTURES[lastAdventure].run().finally(() => delete svg.dataset.adventure);
+    return A[lastAdventure].run().finally(() => delete svg.dataset.adventure);
   };
 
   // The pupil shows only while the eye has a mood. It pops in with a little
@@ -698,8 +1135,10 @@ const character = (svg, { roam } = {}) => {
       if (!running) return;
       await sleep(rand(300, 1400));
       if (!running) return;
-      // Usually the plain leap; often something more adventurous instead.
-      await (Math.random() < 0.45 ? adventure() : jump());
+      // At first, the next chapter of its story. Then usually the plain
+      // leap, often something more adventurous instead.
+      if (!brave) await story();
+      else await (Math.random() < (roam ? 0.6 : 0.45) ? adventure() : jump());
     }
   };
 
@@ -724,7 +1163,7 @@ const character = (svg, { roam } = {}) => {
       on = "i";
       cx = PERCH.i.x;
       cy = PERCH.i.y;
-      if (roam && !props.length && !ball) setUpYard();
+      if (roam && !yard) setUpYard();
       running = true;
       // Never quite still: a gentle float on its own layer, under every
       // mood, pause and jump. A small tall oval traced at an even pace, so
@@ -1019,17 +1458,19 @@ if (builder) {
 }
 
 // ---------- hero: the eye scans, builds, then lives in the floor plan ----------
-// The plan starts empty. The eye comes in through the front opening and goes
+// The plan starts empty. The eye comes in through the side door and goes
 // room to room, only ever through doorways. In each room it glances along
 // dotted lines of sight to the corners and walls, and the room's walls build
 // in, spreading out from the eye. Then it moves in: furnishes the place and
-// measures two walls, and welcomes its family in at the front opening: a
-// partner and two kids. Together they watch TV, cook (the kids play chase
-// meanwhile), eat dinner round the table and have a dance party; then the
-// kids fall asleep on the sofa and the parents go to bed, where everything
-// stays still. Once through, a little under three minutes, never repeated.
+// measures two walls, and welcomes its family in at the side door: a partner
+// and two kids. Together they watch TV, cook (the kids play chase meanwhile),
+// eat dinner round the table and have a dance party. Then the kids get ready
+// for bed: a bath, teeth brushed, tucked in and read a story till they nod
+// off, and the parents go to bed too. In the morning the kids wake first and
+// pile onto the big bed, the parents wake up to them, and there they all
+// stay, awake and still. Once through, about three minutes, never repeated.
 // Desktop only: phones don't show the drawing. With reduced motion (or
-// without JavaScript) the plan is shown finished, furnished, eye asleep.
+// without JavaScript) the plan is shown finished and furnished.
 const plan = document.querySelector("[data-plan]");
 if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const NS = "http://www.w3.org/2000/svg";
@@ -1095,9 +1536,9 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 
   // Someone in the house: an eye with a pupil, at a place, of a size. The
   // logo's eye is already drawn; the family are added as they arrive.
-  const FRONT = [315, 20]; // the opening in the bathroom's top wall
+  const FRONT = [460, 222]; // the side door, in the dining room's outside wall
   class Eye {
-    constructor({ el = null, r = 10, x = FRONT[0], y = -26 } = {}) {
+    constructor({ el = null, r = 10, x = FRONT[0] + 28, y = FRONT[1] } = {}) {
       if (!el) {
         el = shape("g", { class: "plan-eye" }, plan);
         plan.insertBefore(el, plan.querySelector(".plan-eye"));
@@ -1141,12 +1582,13 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     blink(ms = 320) { return tween(ms, (t) => { this.squint = 1 - 0.85 * Math.sin(Math.PI * t); this.place(); }, linear); }
     // A happy hop on the spot.
     hop(height = 8, ms = 380) { return tween(ms, (t) => { this.bobY = -height * Math.sin(Math.PI * t); this.place(); }, linear); }
-    // Eyes closing for sleep, and staying closed.
+    // Eyes closing for sleep, and opening again in the morning.
     doze(ms = 1400) { return tween(ms, (t) => { this.squint = 1 - 0.85 * t; this.place(); }); }
+    wake(ms = 700) { return tween(ms, (t) => { this.squint = 0.15 + 0.85 * t; this.place(); }); }
   }
 
-  const me = new Eye({ el: plan.querySelector(".plan-eye"), x: FRONT[0], y: -24 });
-  me.lookAt(315, 60);
+  const me = new Eye({ el: plan.querySelector(".plan-eye") });
+  me.lookAt(420, FRONT[1]);
 
   const scan = async (room, i) => {
     for (const [x, y] of room.sights) {
@@ -1211,10 +1653,10 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   // ---- The family ----
   let partner, kidA, kidB, family = [];
 
-  // At the front opening: one by one they come in, each greeted with a hop.
+  // At the side door: one by one they come in, each greeted with a hop.
   const welcome = async () => {
-    await me.walkTo(315, 46);
-    me.lookAt(315, 0);
+    await me.walkTo(434, FRONT[1]);
+    me.lookAt(480, FRONT[1]);
     await sleep(500);
     await me.hop(6);
     partner = new Eye();
@@ -1222,13 +1664,13 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     kidB = new Eye({ r: 6.5 });
     family = [partner, kidA, kidB];
     // Step aside to let them in.
-    await me.glide(272, 70);
-    me.lookAt(315, 20);
-    const spots = [[300, 92], [270, 110], [300, 130]];
+    await me.glide(436, 252);
+    me.lookAt(...FRONT);
+    const spots = [[400, 226], [372, 238], [346, 220]];
     for (let k = 0; k < family.length; k++) {
       const f = family[k];
-      f.lookAt(315, 60);
-      await f.glide(FRONT[0], FRONT[1] + 6);
+      f.lookAt(420, FRONT[1]);
+      await f.glide(FRONT[0] - 4, FRONT[1]);
       f.here = 0;
       await all(f.glide(...spots[k]), me.hop(6));
       await all(f.hop(f.r < 10 ? 10 : 6), me.blink());
@@ -1241,8 +1683,12 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   };
 
   // Everyone off somewhere at once, each by their own way through the
-  // doorways, setting off a beat apart.
-  const go = (moves) => all(...moves.map(([who, x, y], k) => sleep(k * 260).then(() => who.walkTo(x, y))));
+  // doorways, setting off a beat apart; by way of a point first, if given,
+  // to keep round the furniture.
+  const go = (moves) => all(...moves.map(([who, x, y, via], k) => sleep(k * 260).then(async () => {
+    if (via) await who.walkTo(...via);
+    await who.walkTo(x, y);
+  })));
 
   const watchTV = async () => {
     await go([[me, 112, 306], [partner, 152, 306], [kidA, 112, 272], [kidB, 156, 272]]);
@@ -1300,7 +1746,7 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   // Dinner round the table, a plate each, eaten bite by bite.
   const eat = async () => {
     const seats = [[me, 350, 285, 376, 285], [partner, 430, 285, 404, 285], [kidA, 390, 238, 390, 268], [kidB, 390, 327, 390, 302]];
-    await go(seats.map(([who, x, y]) => [who, x, y]));
+    await go(seats.map(([who, x, y]) => [who, x, y, who === partner ? [430, 236] : null]));
     const plates = seats.map(([who, , , px, py]) => {
       const plate = shape("circle", { class: "plan-mark", cx: px, cy: py, r: 7 });
       const food = [[-2.5, -1.5], [2.5, -1.5], [0, 2.5]].map(([dx, dy]) => shape("circle", { class: "plan-food", cx: px + dx, cy: py + dy, r: 2 }));
@@ -1349,32 +1795,160 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     everyone.forEach((e) => { e.bobX = e.bobY = 0; e.squint = 1; e.lookAhead(); e.place(); });
   };
 
-  // The kids nod off on the sofa; the parents go to bed. And there they stay.
-  const bedtime = async () => {
-    await go([[kidA, 112, 312], [kidB, 150, 312]]);
-    await all(kidA.doze(1600), kidB.doze(1900));
-    me.lookAt(130, 312);
-    partner.lookAt(130, 312);
-    await sleep(800);
+  // Getting the kids ready for bed: a bath (with bubbles) while a parent
+  // keeps an eye on them and the other turns down their beds.
+  const BEDS = [[225, 126], [305, 126]];
+  let blankets = [];
+  const bathTime = async () => {
+    partner.lookAt(kidA.x, kidA.y);
+    await partner.hop(5);
+    // The kids share a look first: do they have to?
+    kidA.lookAt(kidB.x, kidB.y);
+    kidB.lookAt(kidA.x, kidA.y);
+    await sleep(900);
+    await go([[kidA, 305, 44], [kidB, 305, 63], [partner, 258, 64], [me, 265, 150]]);
+    partner.lookAt(305, 54);
+    me.lookAt(225, 130);
+    // The beds turned down while the kids splash.
+    blankets = BEDS.map(([x]) => shape("rect", { class: "plan-blanket", x: x - 15, y: 134, width: 30, height: 22, rx: 3, opacity: 0 }));
+    const turnDown = (async () => {
+      for (const [k, b] of blankets.entries()) {
+        me.lookAt(BEDS[k][0], 145);
+        await tween(500, (t) => b.setAttribute("opacity", t));
+        await sleep(500);
+      }
+      me.lookAt(265, 90);
+    })();
+    const bubbles = (async () => {
+      for (let n = 0; n < 14; n++) {
+        drift(shape("circle", { class: "plan-bubble", cx: 296 + (n * 7) % 18, cy: 50 + (n % 3) * 9, r: 1.6 + (n % 3) * 0.8 }), 22, 1500, 3);
+        await sleep(400);
+      }
+    })();
+    await all(turnDown, bubbles, tween(6000, (t, raw) => {
+      kidA.bobX = 3 * Math.sin(raw * Math.PI * 18);
+      kidB.bobY = -2 * Math.abs(Math.sin(raw * Math.PI * 11));
+      kidA.lookAt(kidB.x, kidB.y);
+      kidB.lookAt(kidA.x + kidA.bobX, kidA.y);
+      kidA.place();
+      kidB.place();
+    }, linear));
+    kidA.bobX = kidB.bobY = 0;
+  };
+
+  // Out of the bath and teeth brushed at the double sink, brushes going.
+  const brushTeeth = async () => {
+    await all(kidA.glide(250, 58), kidB.glide(226, 58));
+    partner.lookAt(238, 50);
+    const brushes = [kidA, kidB].map((k) => shape("line", { class: "plan-brush", x1: k.x - 5, y1: k.y - 9, x2: k.x + 5, y2: k.y - 9 }));
+    const foam = (async () => {
+      for (let n = 0; n < 8; n++) {
+        const k = n % 2 ? kidA : kidB;
+        drift(shape("circle", { class: "plan-bubble", cx: k.x + (n % 3) - 1, cy: k.y - 12, r: 1.4 }), 10, 900, 2);
+        await sleep(450);
+      }
+    })();
+    await all(foam, tween(4000, (t, raw) => {
+      [kidA, kidB].forEach((k, i) => {
+        k.lookAt(k.x, 30);
+        const s = 4 * Math.sin(raw * Math.PI * 24 + i);
+        brushes[i].setAttribute("transform", `translate(${s.toFixed(2)} 0)`);
+        k.bobX = s * 0.3;
+        k.place();
+      });
+    }, linear));
+    brushes.forEach((b) => b.remove());
+    kidA.bobX = kidB.bobX = 0;
+    // A little hop each: done!
+    await all(kidA.hop(7), sleep(200).then(() => kidB.hop(7)));
+    await all(kidA.blink(), kidB.blink(), partner.blink());
+  };
+
+  // Into bed, tucked in, a story, and lights out for the kids.
+  const storyTime = async () => {
+    await go([[kidA, ...BEDS[0]], [kidB, ...BEDS[1]], [partner, 265, 116]]);
+    [kidA, kidB].forEach((k) => k.lookAt(265, 150));
+    partner.lookAt(265, 150);
+    const book = shape("g", { class: "plan-book", opacity: 0 });
+    shape("path", { d: "M257 133 L265 136 L273 133 V143 L265 146 L257 143 Z M265 136 V146" }, book);
+    const page = shape("path", { d: "M265 136 L271 134 V143 L265 145.5 Z" }, book);
+    me.lookAt(265, 138);
+    await tween(400, (t) => book.setAttribute("opacity", t));
+    // Pages turning, the kids slowly getting heavy-eyed.
+    for (let n = 0; n < 4; n++) {
+      await sleep(900);
+      await tween(450, (t) => page.setAttribute("transform", `translate(265 0) scale(${(1 - 2 * t).toFixed(3)} 1) translate(-265 0)`));
+      page.removeAttribute("transform");
+      if (n === 1) await kidB.blink(600);
+      if (n === 2) await kidA.blink(700);
+    }
+    await all(kidA.doze(1800), sleep(500).then(() => kidB.doze(1800)));
+    await tween(400, (t) => book.setAttribute("opacity", 1 - t));
+    book.remove();
+    me.lookAt(partner.x, partner.y);
+    partner.lookAt(me.x, me.y);
+    await sleep(900);
+  };
+
+  // The parents tiptoe off to bed, through the bathroom. Night: z's from
+  // both bedrooms for a while.
+  const night = async () => {
     await go([[me, 62, 100], [partner, 98, 100]]);
     await sleep(400);
     me.lookAt(partner.x, partner.y);
     partner.lookAt(me.x, me.y);
     await sleep(700);
     await all(me.doze(1600), partner.doze(1800));
-    for (let n = 0; n < 4; n++) {
+    for (let n = 0; n < 6; n++) {
       drift(shape("text", { class: "plan-z", x: 82 + n * 2, y: 90 }, fx, "z"), 30, 2200, 3);
-      if (n % 2) drift(shape("text", { class: "plan-z", x: 136, y: 300 }, fx, "z"), 22, 1800, 2);
+      if (n % 2) drift(shape("text", { class: "plan-z", x: 262, y: 118 }, fx, "z"), 22, 1800, 2);
       await sleep(1300);
     }
+    await sleep(1500);
+  };
+
+  // Morning. The sun comes up, the kids wake first and run through to the
+  // big bed, the parents wake up to them, and there the family stays.
+  const morning = async () => {
+    const sun = shape("g", { class: "plan-sun", opacity: 0 });
+    shape("circle", { cx: 0, cy: 0, r: 6 }, sun);
+    shape("path", { d: Array.from({ length: 8 }, (_, k) => { const a = (k * Math.PI) / 4, c = Math.cos(a), s = Math.sin(a); return `M${(9 * c).toFixed(1)} ${(9 * s).toFixed(1)} L${(13 * c).toFixed(1)} ${(13 * s).toFixed(1)}`; }).join(" ") }, sun);
+    await tween(2400, (t) => { sun.setAttribute("transform", `translate(474 ${(14 - 24 * t).toFixed(1)})`); sun.setAttribute("opacity", Math.min(1, t * 2)); });
+    await kidB.wake();
+    await kidB.blink();
+    kidB.lookAt(kidA.x, kidA.y);
+    await sleep(400);
+    await kidB.hop(6);
+    await kidA.wake(900);
+    kidA.lookAt(kidB.x, kidB.y);
+    await sleep(500);
+    await all(kidA.hop(8), kidB.hop(8));
+    await tween(500, (t) => blankets.forEach((b) => b.setAttribute("opacity", 1 - t)));
+    blankets.forEach((b) => b.remove());
+    await go([[kidA, 66, 130], [kidB, 94, 130]]);
+    // Bouncing on the big bed until the parents are up.
+    await all(kidA.hop(9), sleep(150).then(() => kidB.hop(9)));
+    await all(kidA.hop(9), sleep(150).then(() => kidB.hop(9)));
+    await partner.wake(900);
+    partner.lookAt(kidB.x, kidB.y);
+    await sleep(300);
+    await me.wake(1100);
+    await me.blink();
+    me.lookAt(kidA.x, kidA.y);
+    await sleep(600);
+    await all(...[me, partner, kidA, kidB].map((e, k) => sleep(k * 120).then(() => e.hop(e.r < 10 ? 8 : 5))));
+    me.lookAt(partner.x, partner.y);
+    partner.lookAt(me.x, me.y);
+    kidA.lookAt(me.x, me.y);
+    kidB.lookAt(partner.x, partner.y);
   };
 
   const run = async () => {
     plan.querySelectorAll(".plan-item").forEach((el) => (el.style.opacity = 0));
     walls.setAttribute("mask", "url(#plan-built)");
-    // In through the front opening, then each room in turn.
+    // In through the side door, then each room in turn.
     await sleep(400);
-    await me.glide(FRONT[0], FRONT[1] + 2);
+    await me.glide(FRONT[0] - 2, FRONT[1]);
     for (let i = 0; i < rooms.length; i++) {
       await me.walkTo(rooms[i].cx, rooms[i].cy);
       await sleep(200);
@@ -1385,20 +1959,23 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await me.blink();
     await sleep(700);
 
-    // Moving in: furniture, room by room, from the kitchen round to the bath.
+    // Moving in: furniture, room by room, in the order it scanned them.
     const furnish = [
-      ["counter", 400, 150], ["stove", 405, 101], ["table", 348, 285], ["tv", 190, 240],
-      ["sofa", 130, 280], ["speaker", 70, 228], ["bed", 150, 90], ["tub", 230, 160],
+      ["table", 348, 285], ["counter", 400, 150], ["stove", 405, 101], ["tv", 190, 240],
+      ["sofa", 130, 280], ["speaker", 70, 228], ["kidbeds", 265, 150], ["sink", 238, 62],
+      ["tub", 272, 58], ["bed", 150, 90],
     ];
     for (const [name, x, y] of furnish) {
       await me.walkTo(x, y);
       await setDown(name);
       await sleep(350);
     }
-    // Measuring up. The second wall right to left, below the speaker, so
-    // the walk there stays clear of it.
+    // Measuring up. The second wall right to left, below the speaker, and
+    // reached by way of the room's left side, so the walk there stays clear
+    // of the speaker and the TV.
     await measure([182, 30], [182, 190], "15′", [168, 114]);
     await sleep(400);
+    await me.walkTo(110, 255);
     await measure([290, 266], [30, 266], "23′", [160, 260]);
     await sleep(600);
 
@@ -1413,7 +1990,13 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await sleep(600);
     await danceParty();
     await sleep(700);
-    await bedtime();
+    await bathTime();
+    await sleep(500);
+    await brushTeeth();
+    await sleep(500);
+    await storyTime();
+    await night();
+    await morning();
   };
 
   // Only once the drawing is actually on screen (desktop widths).
@@ -1426,9 +2009,11 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 
 // ---------- the mascot at the foot of the home page ----------
 // The logo again, in a strip above the footer, with the eye living its life
-// there: moods, leaps, adventures, and runs along the ground that stay
-// within the page's text column, so a trip from side to side is short. It
-// starts when scrolled into view.
+// there. It starts out too scared to leave the letters, works up the
+// courage to climb down, and from then on plays in the yard (basketball,
+// football, bowling, ice fishing) between moods, leaps and runs along the
+// ground, all within the page's text column. It starts when scrolled into
+// view.
 const mascot = document.querySelector(".mascot .loader");
 if (mascot && "IntersectionObserver" in window) {
   const VIEW = mascot.viewBox.baseVal;
