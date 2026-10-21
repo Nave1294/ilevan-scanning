@@ -13,7 +13,9 @@
 
        Movement is split across nested layers so a jump is a true arc:
        .ilv-x carries the dot across at a steady pace, .ilv-y rises and falls
-       with gravity-like easing, and .ilv-dot only squashes and stretches.
+       with gravity-like easing, .ilv-hover (scripted only) keeps it gently
+       floating so it's never quite still, and .ilv-dot only squashes and
+       stretches.
        Names are prefixed because, inlined, they share the page's namespace.
 
        Perches, as offsets from the dot's place in the logo (centre 155, 158;
@@ -29,7 +31,7 @@
     .ilv-stem { animation-name: ilv-stem; }
     .ilv-bar { animation-name: ilv-bar; }
     .ilv-eye { opacity: 0; }
-    .ilv-pupil { transform-box: fill-box; transform-origin: 50% 50%; }
+    .ilv-pupil, .ilv-eye { transform-box: fill-box; transform-origin: 50% 50%; }
 
     /* Across: still while on a perch, steady while in the air. */
     @keyframes ilv-x {
@@ -92,10 +94,10 @@
   <g fill="#111">
     <rect class="ilv-stem" x="52" y="556" width="213" height="1196" rx="106.5"/>
     <rect class="ilv-bar" x="625" y="0" width="210" height="1748"/>
-    <g class="ilv-x"><g class="ilv-y"><g class="ilv-dot">
+    <g class="ilv-x"><g class="ilv-y"><g class="ilv-hover"><g class="ilv-dot">
       <circle cx="155" cy="158" r="155"/>
       <!-- The pupil that makes the dot an eye. -->
       <g class="ilv-eye"><circle class="ilv-pupil" cx="155" cy="150" r="46" fill="#fff"/></g>
-    </g></g></g>
+    </g></g></g></g>
   </g>
 </svg>

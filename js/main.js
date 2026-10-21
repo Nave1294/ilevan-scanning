@@ -151,9 +151,9 @@ if (sqftInput) {
 // Web Animations API, that's what shows.
 const character = (svg) => {
   const q = (sel) => svg.querySelector(sel);
-  const X = q(".ilv-x"), Y = q(".ilv-y"), dot = q(".ilv-dot"), stem = q(".ilv-stem"), bar = q(".ilv-bar");
+  const X = q(".ilv-x"), Y = q(".ilv-y"), hover = q(".ilv-hover"), dot = q(".ilv-dot"), stem = q(".ilv-stem"), bar = q(".ilv-bar");
   const eye = q(".ilv-eye"), pupil = q(".ilv-pupil");
-  const parts = [X, Y, dot, stem, bar, eye, pupil];
+  const parts = [X, Y, hover, dot, stem, bar, eye, pupil];
   // Perches, matching the offsets documented in loader.svg. `sink` is how
   // far the eye rides down with what it lands on as that gives.
   const PERCH = {
@@ -199,10 +199,9 @@ const character = (svg) => {
       play(p.under, [{ transform: "none" }, { transform: p.give, offset: 0.35, easing: "cubic-bezier(0.3, 1.6, 0.5, 1)" }, { transform: "none" }], { duration: 420 }),
     ]);
 
-  // The leap: it looks where it's going, crouches, arcs over, lands.
+  // The leap: crouch, arc over, land.
   const jump = async () => {
-    const from = PERCH[on], to = PERCH[on === "i" ? "l" : "i"], dir = across();
-    await play(pupil, [{ transform: "none" }, { transform: look(dir * 50, -25) }], { duration: 300, easing: "ease-out" });
+    const from = PERCH[on], to = PERCH[on === "i" ? "l" : "i"];
     fromBase();
     await play(dot, [{ transform: "none" }, { transform: "scale(1.18, 0.82)" }], { duration: 220, easing: "ease-out" });
     await Promise.all([
@@ -213,12 +212,22 @@ const character = (svg) => {
         { transform: at(to).y },
       ], { duration: 720 }),
       play(dot, [{ transform: "scale(0.86, 1.16)" }, { transform: "none", offset: 0.3 }, { transform: "none", offset: 0.8 }, { transform: "scale(0.88, 1.14)" }], { duration: 720 }),
-      // Looking ahead on the way up, then down at the landing.
-      play(pupil, [{ transform: look(dir * 50, -25) }, { transform: look(dir * 40, 30), offset: 0.7 }, { transform: look(dir * 10, 45) }], { duration: 720, easing: "ease-in-out" }),
     ]);
     on = on === "i" ? "l" : "i";
-    await Promise.all([land(to), play(pupil, [{ transform: look(dir * 10, 45) }, { transform: "none" }], { duration: 500, easing: "ease-out" })]);
+    await land(to);
   };
+
+  // The pupil shows only while the eye has a mood. It pops in with a little
+  // overshoot as the eye widens, and shrinks to a point to go.
+  const eyeOpen = () => {
+    fromBase();
+    return Promise.all([
+      play(eye, [{ opacity: 0, transform: "scale(0)" }, { opacity: 1, transform: "scale(1.2)", offset: 0.6 }, { opacity: 1, transform: "none" }], { duration: 380, easing: "cubic-bezier(0.3, 0.7, 0.4, 1)" }),
+      play(dot, [{ transform: "none" }, { transform: "scale(0.94, 1.08)", offset: 0.5 }, { transform: "none" }], { duration: 380, easing: "ease-out" }),
+    ]);
+  };
+  const eyeClose = () =>
+    play(eye, [{ opacity: 1, transform: "none" }, { opacity: 1, transform: "scale(1.12)", offset: 0.3 }, { opacity: 0, transform: "scale(0)" }], { duration: 320, easing: "ease-in" });
 
   const blink = (ms) => (fromMiddle(), play(dot, [{ transform: "none" }, { transform: "scale(1.08, 0.1)", offset: 0.45 }, { transform: "scale(1.08, 0.1)", offset: 0.55 }, { transform: "none" }], { duration: ms, easing: "ease-in-out" }));
 
@@ -316,7 +325,10 @@ const character = (svg) => {
     lastMood = names[Math.floor(Math.random() * names.length)];
     // Visible in the inspector, which helps when tuning the moods.
     svg.dataset.mood = lastMood;
-    return MOODS[lastMood]().finally(() => delete svg.dataset.mood);
+    return eyeOpen()
+      .then(() => MOODS[lastMood]())
+      .then(eyeClose)
+      .finally(() => delete svg.dataset.mood);
   };
 
   // Sit a while, show a mood or two, sit a while, jump.
@@ -356,25 +368,37 @@ const character = (svg) => {
       Y.style.transform = at(PERCH.i).y;
       on = "i";
       running = true;
-      // The pupil opens: the dot becomes an eye.
-      play(eye, [{ opacity: 0 }, { opacity: 1 }], { duration: 400 });
+      // Never quite still: a gentle float on its own layer, under every
+      // mood, pause and jump. A small tall oval traced at an even pace, so
+      // there's no moment of stopping to turn around, and upward only, so it
+      // never sinks into its perch.
+      const float = Array.from({ length: 25 }, (_, k) => {
+        const t = (k / 24) * 2 * Math.PI;
+        return { transform: `translate(${(5 * Math.sin(t)).toFixed(2)}px, ${(-12 + 12 * Math.cos(t)).toFixed(2)}px)` };
+      });
+      hover.animate(float, { duration: 2600, iterations: Infinity, easing: "linear" });
       life();
     },
     stop() {
       running = false;
       if (able) { freeze(); reset(); }
     },
-    // Home to its place in the logo, a wink, and the pupil goes.
+    // Home to its place in the logo, then the pupil pops in for a wink and
+    // pops out again.
     async finish() {
       if (!able) return;
       running = false;
       freeze();
       const settle = { duration: 480, easing: "cubic-bezier(0.3, 0.7, 0.4, 1)" };
       const home = (el) => play(el, [{ transform: el.style.transform || "none" }, { transform: "none" }], settle);
-      await Promise.all([home(X), home(Y), home(dot), home(stem), home(bar), home(pupil), play(eye, [{ opacity: eye.style.opacity || 0 }, { opacity: 1 }], { duration: 150 })]);
+      await Promise.all([
+        home(X), home(Y), home(hover), home(dot), home(stem), home(bar), home(pupil),
+        play(eye, [{ opacity: eye.style.opacity || 0, transform: eye.style.transform || "none" }, { opacity: 0, transform: "scale(0)" }], { duration: 200 }),
+      ]);
+      await eyeOpen();
       await blink(560);
-      await play(eye, [{ opacity: 1 }, { opacity: 0 }], { duration: 260 });
-      await sleep(120);
+      await eyeClose();
+      await sleep(100);
     },
   };
 };
