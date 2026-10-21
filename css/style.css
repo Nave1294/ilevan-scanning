@@ -69,6 +69,10 @@ a { color: inherit; }
   24%, 30% { transform: translate(-2.6px, 0.4px); }
   66%, 72% { transform: translate(2.6px, -0.6px); }
 }
+/* Away while the floor plan's or the footer's eye is on screen: it shrinks
+   out of sight, and pops back when they've gone. */
+.site-header .brand-eye { transition: scale 0.35s cubic-bezier(0.3, 1.5, 0.5, 1), opacity 0.25s ease; }
+.site-header .brand-eye.is-away { scale: 0; opacity: 0; transition-timing-function: ease-in; }
 /* Watching the cursor, its own glancing gives way. */
 .brand-eye.is-watching .brand-pupil { animation: none; transition: transform 0.15s ease-out; }
 /* Out helping with Build your job: the same eye, a little bigger, over the
