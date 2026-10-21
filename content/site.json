@@ -109,7 +109,7 @@
         "name": "Proposed layout",
         "text": "A schematic plan of proposed changes, such as a new layout or an addition, to work out and price the job.",
         "flat": 0,
-        "rate": 2,
+        "rate": 1.8,
         "per": "changes",
         "min": 350
       }
