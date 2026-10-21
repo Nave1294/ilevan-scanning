@@ -232,14 +232,20 @@ if (booking) {
   // their booking lost. On failure, the same answers can go by email
   // instead. Without JavaScript the form still posts the ordinary way.
   const send = booking.querySelector("[data-book-send]");
+  const wait = booking.querySelector("[data-book-wait]");
   const failed = booking.querySelector("[data-book-error]");
   const mailto = booking.querySelector("[data-book-mailto]");
   if (booking.dataset.ajax && window.fetch) {
     booking.addEventListener("submit", async (e) => {
       e.preventDefault();
       failed.hidden = true;
+      // Disabled while sending, so an impatient second tap can't book twice.
       send.disabled = true;
+      send.classList.add("is-sending");
       send.textContent = "Sending…";
+      // FormSubmit sends the email before it answers, which can take a
+      // while; say so after a moment rather than look frozen.
+      const slow = setTimeout(() => (wait.hidden = false), 3000);
       const data = new FormData(booking);
       let ok = false;
       try {
@@ -249,6 +255,7 @@ if (booking) {
       } catch {
         ok = false;
       }
+      clearTimeout(slow);
       if (ok) {
         location.href = booking.querySelector("[data-next]").value || "thanks.html";
         return;
@@ -257,8 +264,10 @@ if (booking) {
       // starting with _ are the form service's settings, not answers.
       const lines = [...data.entries()].filter(([k, v]) => !k.startsWith("_") && String(v).trim()).map(([k, v]) => `${k}: ${v}`);
       mailto.href = `mailto:${booking.dataset.mailto}?subject=${encodeURIComponent(subject.value)}&body=${encodeURIComponent(lines.join("\n"))}`;
+      wait.hidden = true;
       failed.hidden = false;
       send.disabled = false;
+      send.classList.remove("is-sending");
       send.textContent = "Send booking request";
       failed.scrollIntoView({ block: "center", behavior: "smooth" });
     });
