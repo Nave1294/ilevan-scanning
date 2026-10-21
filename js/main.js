@@ -142,28 +142,31 @@ if (sqftInput) {
 
 // ---------- the loader's personality ----------
 // On the booking page the loader is inlined, and while a request sends its
-// dot behaves like a little character: it sits on the i or the l for a
-// random moment, often pulls a face, then leaps to the other perch. When
-// the send succeeds it floats back to its place in the logo and winks. The
-// SVG keeps its own steady CSS loop for anywhere it's a plain image; with
-// reduced motion, or without the Web Animations API, that's what shows.
+// dot becomes an eye: a white pupil appears, and the eye sits on the i or
+// the l for a while, shows how it feels through where it looks and how it
+// moves, then leaps to the other perch. Sends can take up to a minute, so
+// it takes its time. When the send succeeds it floats back to its place in
+// the logo, winks, and the pupil goes. The SVG keeps its own steady CSS
+// loop for anywhere it's a plain image; with reduced motion, or without the
+// Web Animations API, that's what shows.
 const character = (svg) => {
   const q = (sel) => svg.querySelector(sel);
   const X = q(".ilv-x"), Y = q(".ilv-y"), dot = q(".ilv-dot"), stem = q(".ilv-stem"), bar = q(".ilv-bar");
-  const faces = { smile: q(".ilv-smile"), wow: q(".ilv-wow"), look: q(".ilv-look") };
-  const pupil = q(".ilv-pupil");
-  const parts = [X, Y, dot, stem, bar, pupil, ...Object.values(faces)];
+  const eye = q(".ilv-eye"), pupil = q(".ilv-pupil");
+  const parts = [X, Y, dot, stem, bar, eye, pupil];
   // Perches, matching the offsets documented in loader.svg. `sink` is how
-  // far the dot rides down with what it lands on as that gives.
+  // far the eye rides down with what it lands on as that gives.
   const PERCH = {
     i: { x: 0, y: 243, under: stem, give: "scaleY(0.93)", sink: 84 },
     l: { x: 575, y: -313, under: bar, give: "scaleY(0.96)", sink: 70 },
   };
   const APEX = -578;
+  // How far the pupil can travel inside the eye before it touches the edge.
+  const REACH = 62;
   const able = !!svg.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches;
   let running = false;
   let on = "i";
-  let lastFace = "";
+  let lastMood = "";
 
   const rand = (a, b) => a + Math.random() * (b - a);
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -181,69 +184,153 @@ const character = (svg) => {
       () => {}
     );
   };
-  const origin = (o) => (dot.style.transformOrigin = o);
+  // The eye squashes from its base, but blinks and wobbles about its middle.
+  const fromBase = () => (dot.style.transformOrigin = "50% 100%");
+  const fromMiddle = () => (dot.style.transformOrigin = "50% 50%");
   const at = (p) => ({ x: `translateX(${p.x}px)`, y: `translateY(${p.y}px)` });
+  const look = (x, y, extra = "") => `translate(${x}px, ${y}px)${extra}`;
+  // Which way the other perch is: +1 to the right, -1 to the left.
+  const across = () => (on === "i" ? 1 : -1);
 
   const land = (p) =>
     Promise.all([
-      (origin("50% 100%"),
-      play(dot, [{ transform: "scale(0.88, 1.14)" }, { transform: `translateY(${p.sink}px) scale(1.3, 0.7)`, offset: 0.35 }, { transform: "scale(1.08, 0.92)", offset: 0.7 }, { transform: "none" }], { duration: 380, easing: "ease-out" })),
-      play(p.under, [{ transform: "none" }, { transform: p.give, offset: 0.35, easing: "cubic-bezier(0.3, 1.6, 0.5, 1)" }, { transform: "none" }], { duration: 380 }),
+      (fromBase(),
+      play(dot, [{ transform: "scale(0.88, 1.14)" }, { transform: `translateY(${p.sink}px) scale(1.3, 0.7)`, offset: 0.35 }, { transform: "scale(1.08, 0.92)", offset: 0.7 }, { transform: "none" }], { duration: 420, easing: "ease-out" })),
+      play(p.under, [{ transform: "none" }, { transform: p.give, offset: 0.35, easing: "cubic-bezier(0.3, 1.6, 0.5, 1)" }, { transform: "none" }], { duration: 420 }),
     ]);
 
+  // The leap: it looks where it's going, crouches, arcs over, lands.
   const jump = async () => {
-    const from = PERCH[on], to = PERCH[on === "i" ? "l" : "i"];
-    origin("50% 100%");
-    await play(dot, [{ transform: "none" }, { transform: "scale(1.18, 0.82)" }], { duration: 170, easing: "ease-out" });
+    const from = PERCH[on], to = PERCH[on === "i" ? "l" : "i"], dir = across();
+    await play(pupil, [{ transform: "none" }, { transform: look(dir * 50, -25) }], { duration: 300, easing: "ease-out" });
+    fromBase();
+    await play(dot, [{ transform: "none" }, { transform: "scale(1.18, 0.82)" }], { duration: 220, easing: "ease-out" });
     await Promise.all([
-      play(X, [{ transform: at(from).x }, { transform: at(to).x }], { duration: 640, easing: "linear" }),
+      play(X, [{ transform: at(from).x }, { transform: at(to).x }], { duration: 720, easing: "linear" }),
       play(Y, [
         { transform: at(from).y, easing: "cubic-bezier(0.2, 0.6, 0.35, 1)" },
         { transform: `translateY(${APEX}px)`, offset: 0.5, easing: "cubic-bezier(0.65, 0, 0.8, 0.4)" },
         { transform: at(to).y },
-      ], { duration: 640 }),
-      play(dot, [{ transform: "scale(0.86, 1.16)" }, { transform: "none", offset: 0.3 }, { transform: "none", offset: 0.8 }, { transform: "scale(0.88, 1.14)" }], { duration: 640 }),
+      ], { duration: 720 }),
+      play(dot, [{ transform: "scale(0.86, 1.16)" }, { transform: "none", offset: 0.3 }, { transform: "none", offset: 0.8 }, { transform: "scale(0.88, 1.14)" }], { duration: 720 }),
+      // Looking ahead on the way up, then down at the landing.
+      play(pupil, [{ transform: look(dir * 50, -25) }, { transform: look(dir * 40, 30), offset: 0.7 }, { transform: look(dir * 10, 45) }], { duration: 720, easing: "ease-in-out" }),
     ]);
     on = on === "i" ? "l" : "i";
-    await land(to);
+    await Promise.all([land(to), play(pupil, [{ transform: look(dir * 10, 45) }, { transform: "none" }], { duration: 500, easing: "ease-out" })]);
   };
 
-  // Faces it pulls while it waits.
-  const show = (el, hold, extra = []) =>
-    play(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 180 })
-      .then(() => Promise.all([sleep(hold), ...extra.map((f) => f())]))
-      .then(() => play(el, [{ opacity: 1 }, { opacity: 0 }], { duration: 180 }));
-  const blink = (ms) => (origin("50% 50%"), play(dot, [{ transform: "none" }, { transform: "scale(1.08, 0.1)", offset: 0.45 }, { transform: "scale(1.08, 0.1)", offset: 0.55 }, { transform: "none" }], { duration: ms, easing: "ease-in-out" }));
-  const FACES = {
-    wink: () => blink(520),
-    blinks: async () => { await blink(240); await sleep(90); await blink(240); },
-    smile: () => show(faces.smile, 1000, [() => (origin("50% 100%"), play(dot, [{ transform: "none" }, { transform: "scale(1.06, 0.95)", offset: 0.5 }, { transform: "none" }], { duration: 500, iterations: 2 }))]),
-    wow: () => show(faces.wow, 760, [() => (origin("50% 100%"), play(dot, [{ transform: "none" }, { transform: "scale(0.9, 1.14)", offset: 0.2 }, { transform: "scale(0.9, 1.14)", offset: 0.8 }, { transform: "none" }], { duration: 900 }))]),
-    look: () => show(faces.look, 1300, [() => play(pupil, [
-      { transform: "none" }, { transform: "translateX(-62px)", offset: 0.15 }, { transform: "translateX(-62px)", offset: 0.4 },
-      { transform: "translateX(62px)", offset: 0.55 }, { transform: "translateX(62px)", offset: 0.8 }, { transform: "none" },
-    ], { duration: 1300, easing: "ease-in-out" })]),
-    hop: async () => {
+  const blink = (ms) => (fromMiddle(), play(dot, [{ transform: "none" }, { transform: "scale(1.08, 0.1)", offset: 0.45 }, { transform: "scale(1.08, 0.1)", offset: 0.55 }, { transform: "none" }], { duration: ms, easing: "ease-in-out" }));
+
+  // Its moods: only the pupil and the eye's own movement, never a face.
+  const MOODS = {
+    // Looking around: a glance left, a glance right, back.
+    lookAround: () => play(pupil, [
+      { transform: "none" },
+      { transform: look(-REACH, 0), offset: 0.12 }, { transform: look(-REACH, 0), offset: 0.38 },
+      { transform: look(REACH, -8), offset: 0.52 }, { transform: look(REACH, -8), offset: 0.8 },
+      { transform: "none" },
+    ], { duration: 2600, easing: "ease-in-out" }),
+
+    // Curious: peers at the other letter, leaning in, then a slow nod back.
+    curious: () => {
+      const d = across();
+      fromBase();
+      return Promise.all([
+        play(pupil, [{ transform: "none" }, { transform: look(d * REACH, -30), offset: 0.2 }, { transform: look(d * REACH, -30), offset: 0.75 }, { transform: "none" }], { duration: 2400, easing: "ease-in-out" }),
+        play(dot, [{ transform: "none" }, { transform: `translateX(${d * 28}px) scale(0.97, 1.04)`, offset: 0.25 }, { transform: `translateX(${d * 34}px) scale(0.97, 1.04)`, offset: 0.7 }, { transform: "none" }], { duration: 2400, easing: "ease-in-out" }),
+      ]);
+    },
+
+    // Surprised: pupil shrinks to a pinpoint as the eye jolts up and stays
+    // wide for a beat before settling.
+    surprised: () => {
       const p = PERCH[on];
-      for (let n = 0; n < 2; n++) {
-        await play(Y, [{ transform: at(p).y, easing: "ease-out" }, { transform: `translateY(${p.y - 110}px)`, offset: 0.5, easing: "ease-in" }, { transform: at(p).y }], { duration: 340 });
+      fromBase();
+      return Promise.all([
+        play(pupil, [{ transform: "none" }, { transform: "scale(0.4)", offset: 0.08 }, { transform: "scale(0.4)", offset: 0.75 }, { transform: "none" }], { duration: 2000, easing: "ease-out" }),
+        play(Y, [{ transform: at(p).y }, { transform: `translateY(${p.y - 90}px)`, offset: 0.1, easing: "ease-in" }, { transform: at(p).y, offset: 0.25 }, { transform: at(p).y }], { duration: 2000, easing: "ease-out" }),
+        play(dot, [{ transform: "none" }, { transform: "scale(0.88, 1.16)", offset: 0.1 }, { transform: "scale(0.93, 1.09)", offset: 0.3 }, { transform: "scale(0.93, 1.09)", offset: 0.75 }, { transform: "none" }], { duration: 2000, easing: "ease-in-out" }),
+      ]);
+    },
+
+    // Delighted: pupil swells and lifts, three happy little bounces.
+    delighted: async () => {
+      const p = PERCH[on];
+      const grow = play(pupil, [{ transform: "none" }, { transform: look(0, -14, " scale(1.4)"), offset: 0.15 }, { transform: look(0, -14, " scale(1.4)"), offset: 0.85 }, { transform: "none" }], { duration: 2400, easing: "ease-in-out" });
+      await sleep(300);
+      for (let n = 0; n < 3; n++) {
+        await play(Y, [{ transform: at(p).y, easing: "ease-out" }, { transform: `translateY(${p.y - 70}px)`, offset: 0.5, easing: "ease-in" }, { transform: at(p).y }], { duration: 380 });
         await land(p);
       }
+      await grow;
     },
+
+    // Sleepy: the pupil drifts down as the eye slowly sags, holds, then
+    // snaps awake with a start.
+    sleepy: async () => {
+      fromBase();
+      await Promise.all([
+        play(pupil, [{ transform: "none" }, { transform: look(0, 50) }], { duration: 1800, easing: "ease-in" }),
+        play(dot, [{ transform: "none" }, { transform: "scale(1.07, 0.66)" }], { duration: 1800, easing: "ease-in" }),
+      ]);
+      await sleep(500);
+      await Promise.all([
+        play(dot, [{ transform: "scale(1.07, 0.66)" }, { transform: "scale(0.9, 1.14)", offset: 0.35 }, { transform: "none" }], { duration: 500, easing: "ease-out" }),
+        play(pupil, [{ transform: look(0, 50) }, { transform: look(0, -20, " scale(0.8)"), offset: 0.35 }, { transform: "none" }], { duration: 600, easing: "ease-out" }),
+      ]);
+    },
+
+    // Dizzy: the pupil circles twice while the eye wobbles side to side.
+    dizzy: () => {
+      const r = 46, turns = 2, steps = 24;
+      const circle = Array.from({ length: steps + 1 }, (_, k) => {
+        const t = (k / steps) * turns * 2 * Math.PI;
+        return { transform: look(r * Math.sin(t), -r * Math.cos(t)) };
+      });
+      fromMiddle();
+      return Promise.all([
+        play(pupil, [{ transform: "none" }, ...circle, { transform: "none" }], { duration: 2600, easing: "ease-in-out" }),
+        play(dot, [
+          { transform: "none" }, { transform: "translateX(-18px)", offset: 0.15 }, { transform: "translateX(18px)", offset: 0.35 },
+          { transform: "translateX(-14px)", offset: 0.55 }, { transform: "translateX(10px)", offset: 0.75 }, { transform: "none" },
+        ], { duration: 2600, easing: "ease-in-out" }),
+      ]);
+    },
+
+    // Shy: looks down and away, shrinking a little, then peeks back up.
+    shy: () => {
+      const d = -across();
+      fromBase();
+      return Promise.all([
+        play(pupil, [{ transform: "none" }, { transform: look(d * 45, 42), offset: 0.2 }, { transform: look(d * 45, 42), offset: 0.6 }, { transform: look(d * 20, 10), offset: 0.75 }, { transform: look(d * 45, 42), offset: 0.85 }, { transform: "none" }], { duration: 2600, easing: "ease-in-out" }),
+        play(dot, [{ transform: "none" }, { transform: "scale(0.88)", offset: 0.2 }, { transform: "scale(0.88)", offset: 0.85 }, { transform: "none" }], { duration: 2600, easing: "ease-in-out" }),
+      ]);
+    },
+
+    // A slow double blink.
+    blinks: async () => { await blink(420); await sleep(160); await blink(420); },
   };
-  const pullFace = () => {
-    const names = Object.keys(FACES).filter((n) => n !== lastFace);
-    lastFace = names[Math.floor(Math.random() * names.length)];
-    return FACES[lastFace]();
+  const mood = () => {
+    const names = Object.keys(MOODS).filter((n) => n !== lastMood);
+    lastMood = names[Math.floor(Math.random() * names.length)];
+    // Visible in the inspector, which helps when tuning the moods.
+    svg.dataset.mood = lastMood;
+    return MOODS[lastMood]().finally(() => delete svg.dataset.mood);
   };
 
+  // Sit a while, show a mood or two, sit a while, jump.
   const life = async () => {
     while (running) {
-      await sleep(rand(300, 1000));
+      await sleep(rand(600, 1600));
       if (!running) return;
-      if (Math.random() < 0.75) await pullFace();
+      const moods = Math.random() < 0.3 ? 2 : 1;
+      for (let n = 0; n < moods && running; n++) {
+        await mood();
+        if (running) await sleep(rand(400, 1200));
+      }
       if (!running) return;
-      await sleep(rand(250, 1400));
+      await sleep(rand(300, 1400));
       if (!running) return;
       await jump();
     }
@@ -269,28 +356,25 @@ const character = (svg) => {
       Y.style.transform = at(PERCH.i).y;
       on = "i";
       running = true;
+      // The pupil opens: the dot becomes an eye.
+      play(eye, [{ opacity: 0 }, { opacity: 1 }], { duration: 400 });
       life();
     },
     stop() {
       running = false;
       if (able) { freeze(); reset(); }
     },
-    // Back to its place in the logo, then a wink.
+    // Home to its place in the logo, a wink, and the pupil goes.
     async finish() {
       if (!able) return;
       running = false;
       freeze();
-      const settle = { duration: 380, easing: "cubic-bezier(0.3, 0.7, 0.4, 1)" };
-      await Promise.all([
-        play(X, [{ transform: X.style.transform || "none" }, { transform: "none" }], settle),
-        play(Y, [{ transform: Y.style.transform || "none" }, { transform: "none" }], settle),
-        play(dot, [{ transform: dot.style.transform || "none" }, { transform: "none" }], settle),
-        play(stem, [{ transform: stem.style.transform || "none" }, { transform: "none" }], settle),
-        play(bar, [{ transform: bar.style.transform || "none" }, { transform: "none" }], settle),
-        ...Object.values(faces).map((f) => play(f, [{ opacity: f.style.opacity || 0 }, { opacity: 0 }], { duration: 150 })),
-      ]);
-      await blink(520);
-      await sleep(180);
+      const settle = { duration: 480, easing: "cubic-bezier(0.3, 0.7, 0.4, 1)" };
+      const home = (el) => play(el, [{ transform: el.style.transform || "none" }, { transform: "none" }], settle);
+      await Promise.all([home(X), home(Y), home(dot), home(stem), home(bar), home(pupil), play(eye, [{ opacity: eye.style.opacity || 0 }, { opacity: 1 }], { duration: 150 })]);
+      await blink(560);
+      await play(eye, [{ opacity: 1 }, { opacity: 0 }], { duration: 260 });
+      await sleep(120);
     },
   };
 };

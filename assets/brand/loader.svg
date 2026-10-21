@@ -7,9 +7,9 @@
 
        This file animates itself with a steady CSS loop, for use as a plain
        image. The booking page inlines it and js/main.js takes over (adding
-       .ilv-scripted), giving the dot random pauses and faces; the white
-       features in .ilv-smile, .ilv-wow and .ilv-look exist for that and
-       stay hidden here.
+       .ilv-scripted), giving the dot random pauses and expressions; the
+       white pupil in .ilv-eye, which turns the dot into an eye, exists for
+       that and stays hidden here.
 
        Movement is split across nested layers so a jump is a true arc:
        .ilv-x carries the dot across at a steady pace, .ilv-y rises and falls
@@ -28,7 +28,7 @@
     .ilv-dot { animation-name: ilv-squash; animation-timing-function: ease-in-out; }
     .ilv-stem { animation-name: ilv-stem; }
     .ilv-bar { animation-name: ilv-bar; }
-    .ilv-smile, .ilv-wow, .ilv-look { opacity: 0; }
+    .ilv-eye { opacity: 0; }
     .ilv-pupil { transform-box: fill-box; transform-origin: 50% 50%; }
 
     /* Across: still while on a perch, steady while in the air. */
@@ -94,16 +94,8 @@
     <rect class="ilv-bar" x="625" y="0" width="210" height="1748"/>
     <g class="ilv-x"><g class="ilv-y"><g class="ilv-dot">
       <circle cx="155" cy="158" r="155"/>
-      <!-- Faces, drawn in white on the dot. -->
-      <g class="ilv-smile" fill="#fff">
-        <circle cx="102" cy="118" r="21"/><circle cx="208" cy="118" r="21"/>
-        <path d="M80 180 Q155 262 230 180" fill="none" stroke="#fff" stroke-width="22" stroke-linecap="round"/>
-      </g>
-      <g class="ilv-wow" fill="#fff">
-        <circle cx="102" cy="108" r="19"/><circle cx="208" cy="108" r="19"/>
-        <circle cx="155" cy="212" r="27" fill="none" stroke="#fff" stroke-width="16"/>
-      </g>
-      <g class="ilv-look"><circle class="ilv-pupil" cx="155" cy="150" r="46" fill="#fff"/></g>
+      <!-- The pupil that makes the dot an eye. -->
+      <g class="ilv-eye"><circle class="ilv-pupil" cx="155" cy="150" r="46" fill="#fff"/></g>
     </g></g></g>
   </g>
 </svg>
