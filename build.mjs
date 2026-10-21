@@ -531,6 +531,10 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
 ${body}
   </main>
 
+  ${home ? `<section class="mascot" aria-hidden="true">
+    ${loaderSvg}
+  </section>` : ""}
+
   <footer class="site-footer">
     <div class="wrap">© ${new Date().getFullYear()} ${name}</div>
   </footer>

@@ -149,7 +149,10 @@ if (sqftInput) {
 // the logo, winks, and the pupil goes. The SVG keeps its own steady CSS
 // loop for anywhere it's a plain image; with reduced motion, or without the
 // Web Animations API, that's what shows.
-const character = (svg) => {
+// `roam`, if given, says how far it may run along the ground: a function
+// returning { left, right } as the furthest offsets (in the drawing's units)
+// the eye can reach while staying on screen. Without it, runs stay short.
+const character = (svg, { roam } = {}) => {
   const q = (sel) => svg.querySelector(sel);
   const X = q(".ilv-x"), Y = q(".ilv-y"), hover = q(".ilv-hover"), dot = q(".ilv-dot"), stem = q(".ilv-stem"), bar = q(".ilv-bar");
   const eye = q(".ilv-eye"), pupil = q(".ilv-pupil");
@@ -346,13 +349,55 @@ const character = (svg) => {
         await sleep(300);
         await leap(OUTSIDE[home], GROUND, { rise: 120, ms: 820, across: "early" });
         await lookTo(side * REACH, 0, 300);
-        for (let n = 1; n <= 5; n++) await stride(OUTSIDE[home] + side * 130 * n);
+        // How far: a short dash, or with room to roam, anywhere from a third
+        // of the way to nearly the edge of the screen, at a longer stride.
+        const start = OUTSIDE[home];
+        const edge = roam ? (side < 0 ? roam().left : roam().right) : start + side * 650;
+        const span = Math.max(0, Math.abs(edge - start)) * (roam ? rand(0.6, 0.95) : 1);
+        const length = roam ? 260 : 130;
+        const strides = Math.max(1, Math.floor(span / length));
+        for (let n = 1; n <= strides; n++) await stride(start + side * length * n);
         await sleep(300);
         await lookTo(-side * REACH, 0, 250);
         await sleep(500);
-        for (let n = 4; n >= 0; n--) await stride(OUTSIDE[home] + side * 130 * n);
+        for (let n = strides - 1; n >= 0; n--) await stride(start + side * length * n);
         await lookTo(0, -REACH, 400);
         await sleep(300);
+        await leap(PERCH[home].x, PERCH[home].y, { rise: 180, ms: 950, across: "late", arrive: onto(home) });
+        await lookTo(0, 0, 400);
+        await sleep(250);
+        await eyeClose();
+      },
+    },
+    // With room to roam only: down to the ground, nearly to one edge of the
+    // screen, all the way across to the other, then home.
+    crossing: {
+      when: () => !!roam,
+      run: async () => {
+        const home = on, side = on === "i" ? -1 : 1, start = OUTSIDE[home], length = 300;
+        const { left, right } = roam();
+        const near = side < 0 ? left : right, far = side < 0 ? right : left;
+        // Whole strides only, rounded down, so it never overshoots an edge.
+        const runTo = async (x, ms) => {
+          const n = Math.floor(Math.abs(x - cx) / length), dir = Math.sign(x - cx);
+          for (let k = 0; k < n; k++) await stride(cx + dir * length, ms);
+        };
+        await eyeOpen();
+        await lookTo(side * REACH, 45, 400);
+        await leap(start, GROUND, { rise: 120, ms: 820, across: "early" });
+        await lookTo(side * REACH, 0, 250);
+        await runTo(near, 210);
+        await sleep(300);
+        await lookTo(-side * REACH, 0, 250);
+        await sleep(400);
+        await runTo(far, 190);
+        await sleep(300);
+        await lookTo(side * REACH, 0, 250);
+        await sleep(400);
+        await runTo(start, 210);
+        await stride(start, 210);
+        await lookTo(0, -REACH, 400);
+        await sleep(250);
         await leap(PERCH[home].x, PERCH[home].y, { rise: 180, ms: 950, across: "late", arrive: onto(home) });
         await lookTo(0, 0, 400);
         await sleep(250);
@@ -362,7 +407,9 @@ const character = (svg) => {
   };
   let lastAdventure = "";
   const adventure = () => {
-    const names = Object.keys(ADVENTURES).filter((n) => n !== lastAdventure && ADVENTURES[n].when());
+    // With room to roam, the ground adventures come up twice as often.
+    const pool = [...Object.keys(ADVENTURES), ...(roam ? ["groundRun", "crossing"] : [])];
+    const names = pool.filter((n) => n !== lastAdventure && ADVENTURES[n].when());
     if (!names.length) return jump();
     lastAdventure = names[Math.floor(Math.random() * names.length)];
     svg.dataset.adventure = lastAdventure;
@@ -496,8 +543,9 @@ const character = (svg) => {
       if (!running) return;
       await sleep(rand(300, 1400));
       if (!running) return;
-      // Usually the plain leap; often something more adventurous instead.
-      await (Math.random() < 0.45 ? adventure() : jump());
+      // Usually the plain leap; often something more adventurous instead,
+      // more often still when there's room to roam.
+      await (Math.random() < (roam ? 0.6 : 0.45) ? adventure() : jump());
     }
   };
 
@@ -923,5 +971,32 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const go = () => { if (!started && wide.matches) { started = true; run(); } };
   go();
   wide.addEventListener("change", go);
+}
+
+// ---------- the mascot at the foot of the home page ----------
+// The logo again, in a full-width strip above the footer, with the eye
+// living its life there: moods, leaps, adventures, and runs that can reach
+// most of the way to either edge of the screen. It starts when scrolled
+// into view.
+const mascot = document.querySelector(".mascot .loader");
+if (mascot && "IntersectionObserver" in window) {
+  const VIEW = mascot.viewBox.baseVal;
+  // An offset of 0 puts the dot's left edge at x 0 and its right edge at
+  // 310 (it's 310 across). Between these it stays 160 units clear of either
+  // screen edge, room for its squash and float.
+  const roam = () => {
+    const box = mascot.getBoundingClientRect();
+    const perPx = VIEW.width / box.width;
+    const leftEdge = VIEW.x - box.left * perPx;
+    const rightEdge = VIEW.x + (innerWidth - box.left) * perPx;
+    return { left: leftEdge + 160, right: rightEdge - 310 - 160 };
+  };
+  const life = character(mascot, { roam });
+  new IntersectionObserver((entries, seen) => {
+    if (entries.some((e) => e.isIntersecting)) {
+      life.start();
+      seen.disconnect();
+    }
+  }, { threshold: 0.4 }).observe(mascot);
 }
 

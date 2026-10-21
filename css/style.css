@@ -350,6 +350,13 @@ nav a:hover { color: var(--text); }
   .builder-result { position: static; }
 }
 
+/* ---------- the mascot above the footer ----------
+   The logo with its eye at play, in a strip the full width of the screen.
+   The eye runs off the drawing's edges (overflow visible), and the strip
+   clips it at the screen's edges so the page never scrolls sideways. */
+.mascot { overflow: hidden; display: grid; justify-items: center; padding: 48px 0 0; border-top: 1px solid var(--border); }
+.mascot .loader { width: clamp(110px, 12vw, 150px); height: auto; overflow: visible; }
+
 /* ---------- booking form: when sending fails ---------- */
 .send-error { margin-top: 16px; padding: 18px 20px; border-radius: var(--radius); background: #fdf3f0; border: 1px solid #f0c9bd; }
 .send-error[hidden] { display: none; }
