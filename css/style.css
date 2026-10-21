@@ -376,7 +376,9 @@ nav a:hover { color: var(--text); }
 .sending-screen[hidden] { display: none; }
 .sending-screen.is-shown { opacity: 1; }
 .sending-inner { display: grid; justify-items: center; max-width: 360px; text-align: center; }
-.sending-screen .loader { width: clamp(96px, 22vw, 128px); height: auto; margin-bottom: 32px; }
+/* Visible overflow: its adventures take it off the letters, down to the
+   ground and off to either side. */
+.sending-screen .loader { width: clamp(96px, 22vw, 128px); height: auto; margin-bottom: 32px; overflow: visible; }
 .sending-title { margin: 0 0 8px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
 .sending-note { margin: 0; font-size: 15px; color: var(--muted); }
 .sending-note[hidden] { display: none; }

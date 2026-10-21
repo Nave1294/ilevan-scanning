@@ -160,7 +160,6 @@ const character = (svg) => {
     i: { x: 0, y: 243, under: stem, give: "scaleY(0.93)", sink: 84 },
     l: { x: 575, y: -313, under: bar, give: "scaleY(0.96)", sink: 70 },
   };
-  const APEX = -578;
   // How far the pupil can travel inside the eye before it touches the edge.
   const REACH = 62;
   const able = !!svg.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -192,29 +191,182 @@ const character = (svg) => {
   // Which way the other perch is: +1 to the right, -1 to the left.
   const across = () => (on === "i" ? 1 : -1);
 
-  const land = (p) =>
-    Promise.all([
-      (fromBase(),
-      play(dot, [{ transform: "scale(0.88, 1.14)" }, { transform: `translateY(${p.sink}px) scale(1.3, 0.7)`, offset: 0.35 }, { transform: "scale(1.08, 0.92)", offset: 0.7 }, { transform: "none" }], { duration: 420, easing: "ease-out" })),
-      play(p.under, [{ transform: "none" }, { transform: p.give, offset: 0.35, easing: "cubic-bezier(0.3, 1.6, 0.5, 1)" }, { transform: "none" }], { duration: 420 }),
-    ]);
+  // Where the eye is now, as offsets from its place in the logo.
+  let cx = 0, cy = PERCH.i.y;
+  const tx = (v) => `translateX(${v}px)`;
+  const ty = (v) => `translateY(${v}px)`;
 
-  // The leap: crouch, arc over, land.
-  const jump = async () => {
-    const from = PERCH[on], to = PERCH[on === "i" ? "l" : "i"];
+  // Squash on arrival. Against the ground or a letter top it squashes
+  // downward (and sinks with a letter that gives); against a wall it
+  // flattens sideways towards that wall.
+  const squash = ({ under = null, give = "", sink = 0, wall = 0 } = {}) => {
+    if (wall) {
+      dot.style.transformOrigin = wall > 0 ? "100% 50%" : "0% 50%";
+      return play(dot, [{ transform: "none" }, { transform: "scale(0.74, 1.14)", offset: 0.4 }, { transform: "none" }], { duration: 300, easing: "ease-out" });
+    }
     fromBase();
-    await play(dot, [{ transform: "none" }, { transform: "scale(1.18, 0.82)" }], { duration: 220, easing: "ease-out" });
-    await Promise.all([
-      play(X, [{ transform: at(from).x }, { transform: at(to).x }], { duration: 720, easing: "linear" }),
-      play(Y, [
-        { transform: at(from).y, easing: "cubic-bezier(0.2, 0.6, 0.35, 1)" },
-        { transform: `translateY(${APEX}px)`, offset: 0.5, easing: "cubic-bezier(0.65, 0, 0.8, 0.4)" },
-        { transform: at(to).y },
-      ], { duration: 720 }),
-      play(dot, [{ transform: "scale(0.86, 1.16)" }, { transform: "none", offset: 0.3 }, { transform: "none", offset: 0.8 }, { transform: "scale(0.88, 1.14)" }], { duration: 720 }),
+    return Promise.all([
+      play(dot, [{ transform: "scale(0.88, 1.14)" }, { transform: `translateY(${sink}px) scale(1.3, 0.7)`, offset: 0.35 }, { transform: "scale(1.08, 0.92)", offset: 0.7 }, { transform: "none" }], { duration: 420, easing: "ease-out" }),
+      under && play(under, [{ transform: "none" }, { transform: give, offset: 0.35, easing: "cubic-bezier(0.3, 1.6, 0.5, 1)" }, { transform: "none" }], { duration: 420 }),
     ]);
-    on = on === "i" ? "l" : "i";
-    await land(to);
+  };
+
+  // A leap to (x, y): crouch, arc over a peak `rise` above the higher end,
+  // arrive. Time up and time down follow the square root of each drop, as
+  // under gravity. `across` times the sideways travel: "even", "early" (get
+  // clear of a letter before dropping past it) or "late" (rise clear of one
+  // before moving over it).
+  const leap = async (x, y, { rise = 260, ms = 720, across = "even", crouch = true, arrive = {} } = {}) => {
+    const peak = Math.min(cy, y) - rise;
+    const up = Math.sqrt(cy - peak), down = Math.sqrt(y - peak);
+    const top = up / (up + down || 1);
+    if (crouch) {
+      fromBase();
+      await play(dot, [{ transform: "none" }, { transform: "scale(1.18, 0.82)" }], { duration: 220, easing: "ease-out" });
+    }
+    const xFrames = {
+      even: [{ transform: tx(cx) }, { transform: tx(x) }],
+      early: [{ transform: tx(cx) }, { transform: tx(x), offset: 0.4 }, { transform: tx(x) }],
+      late: [{ transform: tx(cx) }, { transform: tx(cx), offset: 0.55 }, { transform: tx(x) }],
+    }[across];
+    await Promise.all([
+      play(X, xFrames, { duration: ms, easing: across === "even" ? "linear" : "ease-in-out" }),
+      play(Y, [
+        { transform: ty(cy), easing: "cubic-bezier(0.2, 0.6, 0.35, 1)" },
+        { transform: ty(peak), offset: top, easing: "cubic-bezier(0.65, 0, 0.8, 0.4)" },
+        { transform: ty(y) },
+      ], { duration: ms }),
+      play(dot, [{ transform: "scale(0.86, 1.16)" }, { transform: "none", offset: 0.3 }, { transform: "none", offset: 0.8 }, { transform: "scale(0.88, 1.14)" }], { duration: ms }),
+    ]);
+    cx = x; cy = y;
+    await squash(arrive);
+  };
+  const onto = (name) => ({ under: PERCH[name].under, give: PERCH[name].give, sink: PERCH[name].sink });
+
+  // The plain leap between the two letters.
+  const jump = async () => {
+    const to = on === "i" ? "l" : "i";
+    await leap(PERCH[to].x, PERCH[to].y, { rise: 265, arrive: onto(to) });
+    on = to;
+  };
+
+  // Shuffling along a wall or the ground: a few short moves, each a little
+  // squash and stretch.
+  const step = (x, y, ms) =>
+    Promise.all([
+      play(X, [{ transform: tx(cx) }, { transform: tx(x) }], { duration: ms, easing: "ease-in-out" }),
+      play(Y, [{ transform: ty(cy) }, { transform: ty(y) }], { duration: ms, easing: "ease-in-out" }),
+      (fromBase(), play(dot, [{ transform: "none" }, { transform: "scale(1.06, 0.94)", offset: 0.5 }, { transform: "none" }], { duration: ms })),
+    ]).then(() => { cx = x; cy = y; });
+  // A running stride: a quick low hop along the ground.
+  const stride = (x, ms = 230) =>
+    Promise.all([
+      play(X, [{ transform: tx(cx) }, { transform: tx(x) }], { duration: ms, easing: "linear" }),
+      play(Y, [{ transform: ty(cy), easing: "ease-out" }, { transform: ty(cy - 70), offset: 0.5, easing: "ease-in" }, { transform: ty(cy) }], { duration: ms }),
+      (fromBase(), play(dot, [{ transform: "scale(1.1, 0.9)" }, { transform: "scale(0.94, 1.06)", offset: 0.5 }, { transform: "scale(1.1, 0.9)" }], { duration: ms })),
+    ]).then(() => { cx = x; });
+  const lookTo = (x, y, ms = 400) => play(pupil, [{ transform: pupil.style.transform || "none" }, { transform: x || y ? look(x, y) : "none" }], { duration: ms, easing: "ease-in-out" });
+  const tremble = (ms) => {
+    fromMiddle();
+    const n = 14;
+    return play(dot, Array.from({ length: n + 1 }, (_, k) => ({ transform: k === n ? "none" : `translateX(${k % 2 ? 7 : -7}px)` })), { duration: ms, easing: "linear" });
+  };
+
+  // Where things are, as offsets (the logo's dot is centred at 155, 158,
+  // radius 155): the bar's far side is at x 835, so the eye hugging it is
+  // centred 155 further out; the gap between the letters runs from x 265 to
+  // 625; the ground, at the letters' foot, is y 1752.
+  const GROUND = 1752 - 155 - 158;
+  const FAR_WALL = 835;
+  const GAP = { mid: 290, leftWall: 265, rightWall: 315 };
+  const OUTSIDE = { i: -268, l: 845 };
+
+  const ADVENTURES = {
+    // Over the edge of the l: a peek, a climb down the far side, a fright,
+    // and a scramble back up.
+    farSide: {
+      when: () => on === "l",
+      run: async () => {
+        await eyeOpen();
+        await lookTo(REACH, 40, 600);
+        await sleep(500);
+        await leap(FAR_WALL, -58, { rise: 120, ms: 620, across: "early", arrive: { wall: -1 } });
+        await lookTo(0, 50, 300);
+        for (const y of [142, 342, 542]) {
+          await step(FAR_WALL, y, 520);
+          await sleep(rand(180, 380));
+        }
+        await lookTo(0, 55, 500);
+        await sleep(400);
+        // Too far: a fright, then up and out as fast as it can go.
+        await Promise.all([play(pupil, [{ transform: look(0, 55) }, { transform: look(0, -20, " scale(0.35)") }], { duration: 160, easing: "ease-out" }), tremble(900)]);
+        for (const y of [342, 142, -58]) await step(FAR_WALL, y, 220);
+        await leap(PERCH.l.x, PERCH.l.y, { rise: 160, ms: 560, across: "late", arrive: onto("l") });
+        await lookTo(0, 0, 500);
+        await sleep(300);
+        await eyeClose();
+      },
+    },
+
+    // Down the gap between the letters, then wall-hopping back out.
+    gap: {
+      when: () => true,
+      run: async () => {
+        await eyeOpen();
+        await lookTo(on === "i" ? REACH : -REACH, 45, 500);
+        await sleep(300);
+        await eyeClose();
+        await leap(GAP.mid, GROUND, { rise: on === "i" ? 120 : 200, ms: 900, across: "early" });
+        await eyeOpen();
+        await lookTo(0, -REACH, 600);
+        await sleep(700);
+        // Up it goes, bouncing off one wall and then the other.
+        const hops = [[GAP.rightWall, 1080, 1], [GAP.leftWall, 720, -1], [GAP.rightWall, 380, 1]];
+        for (const [x, y, wall] of hops) {
+          await leap(x, y, { rise: 60, ms: 420, crouch: false, arrive: { wall } });
+          await lookTo(wall * -40, -REACH, 160);
+        }
+        const to = Math.random() < 0.5 ? "i" : "l";
+        await leap(PERCH[to].x, PERCH[to].y, { rise: 200, ms: 620, crouch: false, across: to === "l" ? "late" : "even", arrive: onto(to) });
+        on = to;
+        await lookTo(0, 0, 400);
+        await sleep(250);
+        await eyeClose();
+      },
+    },
+
+    // Down to the ground outside a letter, a run off to the side, a look
+    // back, a run home and a big leap up.
+    groundRun: {
+      when: () => true,
+      run: async () => {
+        const home = on, side = on === "i" ? -1 : 1;
+        await eyeOpen();
+        await lookTo(side * REACH, 45, 500);
+        await sleep(300);
+        await leap(OUTSIDE[home], GROUND, { rise: 120, ms: 820, across: "early" });
+        await lookTo(side * REACH, 0, 300);
+        for (let n = 1; n <= 5; n++) await stride(OUTSIDE[home] + side * 130 * n);
+        await sleep(300);
+        await lookTo(-side * REACH, 0, 250);
+        await sleep(500);
+        for (let n = 4; n >= 0; n--) await stride(OUTSIDE[home] + side * 130 * n);
+        await lookTo(0, -REACH, 400);
+        await sleep(300);
+        await leap(PERCH[home].x, PERCH[home].y, { rise: 180, ms: 950, across: "late", arrive: onto(home) });
+        await lookTo(0, 0, 400);
+        await sleep(250);
+        await eyeClose();
+      },
+    },
+  };
+  let lastAdventure = "";
+  const adventure = () => {
+    const names = Object.keys(ADVENTURES).filter((n) => n !== lastAdventure && ADVENTURES[n].when());
+    if (!names.length) return jump();
+    lastAdventure = names[Math.floor(Math.random() * names.length)];
+    svg.dataset.adventure = lastAdventure;
+    return ADVENTURES[lastAdventure].run().finally(() => delete svg.dataset.adventure);
   };
 
   // The pupil shows only while the eye has a mood. It pops in with a little
@@ -270,7 +422,7 @@ const character = (svg) => {
       await sleep(300);
       for (let n = 0; n < 3; n++) {
         await play(Y, [{ transform: at(p).y, easing: "ease-out" }, { transform: `translateY(${p.y - 70}px)`, offset: 0.5, easing: "ease-in" }, { transform: at(p).y }], { duration: 380 });
-        await land(p);
+        await squash(onto(on));
       }
       await grow;
     },
@@ -344,7 +496,8 @@ const character = (svg) => {
       if (!running) return;
       await sleep(rand(300, 1400));
       if (!running) return;
-      await jump();
+      // Usually the plain leap; often something more adventurous instead.
+      await (Math.random() < 0.45 ? adventure() : jump());
     }
   };
 
@@ -367,6 +520,8 @@ const character = (svg) => {
       X.style.transform = at(PERCH.i).x;
       Y.style.transform = at(PERCH.i).y;
       on = "i";
+      cx = PERCH.i.x;
+      cy = PERCH.i.y;
       running = true;
       // Never quite still: a gentle float on its own layer, under every
       // mood, pause and jump. A small tall oval traced at an even pace, so
