@@ -63,7 +63,9 @@ if (booking) {
     const sqft = Number(size.value) || 0;
     const known = option && "rate" in option.dataset && sqft > 0;
     line.hidden = !known;
-    if (known) line.textContent = `Estimated first invoice: ${money(estimate(option, sqft))}`;
+    // "First" only when a monthly hosting fee follows.
+    const label = Number(option?.dataset.hosting) ? "Estimated first invoice" : "Estimated invoice";
+    if (known) line.textContent = `${label}: ${money(estimate(option, sqft))}`;
   };
   pkg.addEventListener("change", update);
   size.addEventListener("input", update);

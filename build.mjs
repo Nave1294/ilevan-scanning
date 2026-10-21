@@ -111,7 +111,7 @@ const tiers = (site.tiers || [])
           ${detail ? `<li>${esc(detail)}</li>` : ""}
           ${host ? `<li>${esc(host)}</li>` : ""}
         </ul>
-        <p class="tier-estimate" hidden>First invoice <strong data-estimate></strong></p>
+        <p class="tier-estimate" hidden>${hosting ? "First invoice" : "Invoice"} <strong data-estimate></strong></p>
         <a class="tier-book" href="book.html?package=${encodeURIComponent(t.name || "")}">Book ${esc(t.name)}</a>
       </li>`;
   })
