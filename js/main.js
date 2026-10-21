@@ -58,18 +58,43 @@ if (booking) {
   const wanted = new URLSearchParams(location.search).get("package");
   if (wanted && [...pkg.options].some((o) => o.value === wanted)) pkg.value = wanted;
 
+  const addonsBox = booking.querySelector("[data-addons]");
+  const addons = [...booking.querySelectorAll("[data-addon]")];
+
   const update = () => {
     const option = pkg.selectedOptions[0];
     const sqft = Number(size.value) || 0;
+    const isPlans = option && "plans" in option.dataset;
+
+    // Add-ons belong to schematic plans only; untick them when hidden so a
+    // tour booking never carries them into the email.
+    if (addonsBox) addonsBox.hidden = !isPlans;
+    if (!isPlans) addons.forEach((a) => (a.checked = false));
+
     const known = option && "rate" in option.dataset && sqft > 0;
     line.hidden = !known;
+    if (!known) return;
+
+    if (isPlans) {
+      // A price of 0 means "quoted": named, not added to the total.
+      const priced = (el) => Number(el.dataset.flat) || Number(el.dataset.rate);
+      const cost = (el) => Number(el.dataset.flat) || Number(el.dataset.rate) * sqft;
+      const parts = [option, ...addons.filter((a) => a.checked)];
+      const quoted = parts.filter((el) => !priced(el)).map((el) => el.dataset.name || "the drawings");
+      const total = (priced(option) ? estimate(option, sqft) : 0) + addons.filter((a) => a.checked && priced(a)).reduce((sum, a) => sum + cost(a), 0);
+      line.textContent = !total
+        ? "Priced by quote once we've seen the property."
+        : `Estimated invoice: ${money(total)}${quoted.length ? ` + quote for ${quoted.join(" and ")}` : ""}`;
+      return;
+    }
+
     // "First" only when a monthly hosting fee follows, and then the fee is named.
-    const hosting = Number(option?.dataset.hosting) || 0;
-    const text = hosting
+    const hosting = Number(option.dataset.hosting) || 0;
+    line.textContent = hosting
       ? `Estimated first invoice: ${money(estimate(option, sqft))} + ${money(hosting)}/mo after first month`
       : `Estimated invoice: ${money(estimate(option, sqft))}`;
-    if (known) line.textContent = text;
   };
+  addons.forEach((a) => a.addEventListener("change", update));
   pkg.addEventListener("change", update);
   size.addEventListener("input", update);
   update();

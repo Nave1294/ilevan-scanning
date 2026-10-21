@@ -2,8 +2,8 @@
   "name": "Ilevan Scanning",
   "siteUrl": "https://nave1294.github.io/ilevan-scanning/",
   "eyebrow": "Residential & commercial",
-  "tagline": "3D tours and floor plans for your listings.",
-  "intro": "Zillow and branded LiDAR tours, with floor plans custom-drafted by a Drexel-trained architectural designer. Book a scan and let buyers and tenants walk the property before the first showing.",
+  "tagline": "3D tours and schematic plans.",
+  "intro": "Branded and Zillow 3D tours for listings, and measured schematic plans for renovations and additions. Every drawing is drafted by a Drexel-trained architectural designer.",
   "ctaLabel": "Book a scan",
   "tiers": [
     {
@@ -43,7 +43,7 @@
       "featured": false
     }
   ],
-  "pricingNote": "The first invoice includes the first month of hosting. Floor plan dimensions are approximate and for marketing purposes only.",
+  "pricingNote": "The first invoice includes the first month of hosting. Tour floor plans are approximate and for marketing purposes only.",
   "compare": {
     "heading": "Zillow tour or branded tour?",
     "intro": "Both are walkable 3D tours. The difference is whose name is on them, and where they work best.",
@@ -73,6 +73,30 @@
       }
     ],
     "both": "Complete gets you both: the Zillow tour for your Zillow listing, and the branded tour for everywhere else."
+  },
+  "plans": {
+    "heading": "Schematic plans",
+    "intro": "More than a virtual tour. The same scan becomes measured drawings of the building as it stands, ready for a renovation, an addition, or an architect to design from.",
+    "name": "Existing conditions",
+    "includes": "Dimensioned floor plans of every level, drawn from the scan.",
+    "flat": 0,
+    "rate": 0,
+    "min": 0,
+    "addons": [
+      {
+        "name": "Elevations & sections",
+        "text": "Exterior elevations and building sections, drawn from the same scan.",
+        "flat": 0,
+        "rate": 0
+      },
+      {
+        "name": "Proposed layout",
+        "text": "Schematic drawings of proposed changes, such as a new layout or an addition, to plan and price the work.",
+        "flat": 0,
+        "rate": 0
+      }
+    ],
+    "note": "Schematic drawings are for planning and discussion. They are not construction documents and are not prepared by a licensed architect. Verify dimensions on site before building."
   },
   "steps": [
     {

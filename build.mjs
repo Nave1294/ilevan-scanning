@@ -236,6 +236,43 @@ const compareSection = compareOptions
     </section>`
   : "";
 
+// Schematic plans: a base drawing set plus optional add-ons. Each is priced
+// flat, per square foot (with a minimum), or left at 0 to read "Quoted".
+const plans = site.plans || {};
+const PLANS_PACKAGE = "Schematic plans";
+const priceLabel = (p, prefix = "") => {
+  const flat = num(p.flat), rate = num(p.rate), min = num(p.min);
+  if (flat) return { main: `${prefix}${money(flat)}`, unit: "flat", terms: "" };
+  if (rate) return { main: `${prefix}${money(rate)}`, unit: "/sq ft", terms: min ? `${money(min)} minimum` : "" };
+  return { main: "Quoted", unit: "", terms: "Priced after we see the property" };
+};
+const plansCard = (p, { tag, addon = false, featured = false }) => {
+  const price = priceLabel(p, addon ? "+ " : "");
+  return `<div class="plans-card${featured ? " plans-featured" : ""}">
+            <span class="compare-tag">${esc(tag)}</span>
+            <h3>${esc(p.name)}</h3>
+            <p class="plans-text">${esc(addon ? p.text : p.includes)}</p>
+            <p class="tier-price"><span class="plans-amount">${esc(price.main)}</span>${price.unit ? `<span class="tier-unit">${price.unit}</span>` : ""}</p>
+            ${price.terms ? `<p class="hint">${esc(price.terms)}</p>` : ""}
+          </div>`;
+};
+const plansSection = plans.name
+  ? `<section class="section" id="plans" aria-labelledby="plans-heading">
+      <div class="wrap">
+        <div class="section-head section-head-stack">
+          <h2 id="plans-heading">${esc(plans.heading || PLANS_PACKAGE)}</h2>
+          ${plans.intro ? `<p>${esc(plans.intro)}</p>` : ""}
+        </div>
+        <div class="plans">
+          ${plansCard(plans, { tag: "Included", featured: true })}
+          ${(plans.addons || []).map((a) => plansCard(a, { tag: "Add-on", addon: true })).join("\n          ")}
+        </div>
+        ${plans.note ? `<p class="pricing-note">${esc(plans.note)}</p>` : ""}
+        <p><a class="button" href="book.html?package=${encodeURIComponent(PLANS_PACKAGE)}">Book schematic plans</a></p>
+      </div>
+    </section>`
+  : "";
+
 /* ---------- shared frame ----------
    On the home page the nav jumps within the page; elsewhere it links back to
    the home page's sections. */
@@ -273,6 +310,7 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
       <a class="brand" href="${home ? "#top" : "index.html"}"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
       <nav aria-label="Main">
         <a href="${at}#pricing">Pricing</a>
+        ${plansSection ? `<a href="${at}#plans">Plans</a>` : ""}
         ${hasWork ? `<a href="${at}#work">Work</a>` : ""}
         <a href="book.html">Book</a>
       </nav>
@@ -325,6 +363,8 @@ const home = page({
     </section>
 
     ${compareSection}
+
+    ${plansSection}
 
     <section class="section section-alt" aria-labelledby="process-heading">
       <div class="wrap">
@@ -407,8 +447,17 @@ const book = page({
             ${field("package", `Package ${req}`, `<select id="package" name="Package" required data-book-package>
                 <option value="">Choose a package</option>
                 ${tierOptions}
+                ${plans.name ? `<option value="${PLANS_PACKAGE}" data-plans data-flat="${num(plans.flat)}" data-up-to="0" data-over="0" data-rate="${num(plans.rate)}" data-min="${num(plans.min)}" data-hosting="0">${PLANS_PACKAGE}: ${esc(plans.includes)}</option>` : ""}
                 <option value="Not sure">Not sure yet</option>
               </select>`)}
+            ${(plans.addons || []).length ? `<div class="field addons" hidden data-addons>
+              <span class="addons-label">Add-ons</span>
+              ${plans.addons
+                .map(
+                  (a, i) => `<label class="check"><input type="checkbox" name="Add-on: ${esc(a.name)}" value="Yes" data-addon data-name="${esc(a.name)}" data-flat="${num(a.flat)}" data-rate="${num(a.rate)}"> ${esc(a.name)}</label>`
+                )
+                .join("\n              ")}
+            </div>` : ""}
             <p class="estimate-line" hidden data-book-estimate></p>
           </fieldset>
 

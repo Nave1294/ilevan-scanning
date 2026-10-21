@@ -129,6 +129,28 @@ content:
               - { name: points, label: Points, type: string, list: true }
               - { name: featured, label: Highlight, type: boolean }
           - { name: both, label: Closing line, type: text, description: Shown under the two cards. }
+      - name: plans
+        label: Schematic plans
+        type: object
+        description: "The schematic plans section and booking option. Prices work like the tiers: Flat price, or Per sq ft with a Minimum. Leave both at 0 to show Quoted."
+        fields:
+          - { name: heading, label: Heading, type: string }
+          - { name: intro, label: Intro, type: text }
+          - { name: name, label: Base drawing set, type: string, description: 'e.g. "Existing conditions". Clear it to hide the whole section.' }
+          - { name: includes, label: What's included, type: text }
+          - { name: flat, label: Flat price ($), type: number }
+          - { name: rate, label: Per sq ft ($), type: number }
+          - { name: min, label: Minimum ($), type: number }
+          - name: addons
+            label: Add-ons
+            type: object
+            list: true
+            fields:
+              - { name: name, label: Name, type: string }
+              - { name: text, label: Description, type: text }
+              - { name: flat, label: Flat price ($), type: number }
+              - { name: rate, label: Per sq ft ($), type: number }
+          - { name: note, label: Note under the section, type: text }
       - name: steps
         label: How it works
         type: object

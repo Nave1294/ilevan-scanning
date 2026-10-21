@@ -283,3 +283,18 @@ nav a:hover { color: var(--text); }
 .compare-card li { position: relative; padding-left: 22px; color: var(--muted); }
 .compare-card li::before { content: ""; position: absolute; left: 0; top: 0.62em; width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--accent); }
 .compare-both { margin: 24px 0 0; font-weight: 600; }
+
+/* ---------- schematic plans ---------- */
+.plans { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; margin-bottom: 8px; }
+.plans-card { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+.plans-featured { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.plans-card h3 { font-size: 21px; margin-bottom: 10px; }
+.plans-text { color: var(--muted); margin-bottom: 24px; }
+.plans-amount { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+#plans .pricing-note { margin-bottom: 24px; }
+
+.addons { grid-column: 1 / -1; }
+.addons[hidden] { display: none; }
+.addons-label { font-size: 15px; font-weight: 550; }
+.check { display: flex; align-items: center; gap: 10px; font-weight: 400; cursor: pointer; }
+.booking .check input { width: 18px; height: 18px; padding: 0; accent-color: var(--accent); }
