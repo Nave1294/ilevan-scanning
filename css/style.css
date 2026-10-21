@@ -290,6 +290,10 @@ nav a:hover { color: var(--text); }
 .plans-featured { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .plans-card h3 { font-size: 21px; margin-bottom: 10px; }
 .plans-text { color: var(--muted); margin-bottom: 24px; }
+/* Price and its note travel together, so every card's price sits on the same
+   line whether or not it has a note beneath. */
+.plans-price { margin-top: auto; min-height: 58px; }
+.plans-price .tier-price { margin: 0 0 8px; }
 .plans-amount { font-size: 32px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
 #plans .pricing-note { margin-bottom: 24px; }
 

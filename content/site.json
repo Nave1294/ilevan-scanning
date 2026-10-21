@@ -80,14 +80,14 @@
     "name": "Existing conditions",
     "includes": "A dimensioned schematic plan of every level, drawn from the scan.",
     "flat": 0,
-    "rate": 0,
-    "min": 0,
+    "rate": 0.55,
+    "min": 695,
     "addons": [
       {
         "name": "Elevations & sections",
         "text": "Exterior elevations and building sections, drawn from the same scan.",
         "flat": 0,
-        "rate": 0
+        "rate": 0.3
       },
       {
         "name": "Proposed layout",

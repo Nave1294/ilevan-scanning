@@ -252,8 +252,10 @@ const plansCard = (p, { tag, addon = false, featured = false }) => {
             <span class="compare-tag">${esc(tag)}</span>
             <h3>${esc(p.name)}</h3>
             <p class="plans-text">${esc(addon ? p.text : p.includes)}</p>
-            <p class="tier-price"><span class="plans-amount">${esc(price.main)}</span>${price.unit ? `<span class="tier-unit">${price.unit}</span>` : ""}</p>
-            ${price.terms ? `<p class="hint">${esc(price.terms)}</p>` : ""}
+            <div class="plans-price">
+              <p class="tier-price"><span class="plans-amount">${esc(price.main)}</span>${price.unit ? `<span class="tier-unit">${price.unit}</span>` : ""}</p>
+              ${price.terms ? `<p class="hint">${esc(price.terms)}</p>` : ""}
+            </div>
           </div>`;
 };
 const plansSection = plans.name
