@@ -68,7 +68,7 @@ content:
       - name: tourUrl
         label: 3D tour link
         type: string
-        description: "Optional. A Matterport share link (https://my.matterport.com/show/?m=…) is embedded in the page; any other link becomes a button."
+        description: "Optional. A Realsee link (https://realsee.ai/…) or Matterport share link (https://my.matterport.com/show/?m=…) plays inside the page; any other link becomes a button. With no cover image, the card shows a 3D tour placeholder, so add a cover for a better thumbnail."
 
       - name: images
         label: Gallery

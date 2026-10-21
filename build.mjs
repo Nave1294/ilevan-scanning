@@ -34,8 +34,11 @@ const safeUrl = (s) => {
   return !scheme || /^https$/i.test(scheme[1]) ? v : "";
 };
 
-// Matterport share links ("/show/?m=…") embed directly; anything else is a link.
-const embeddable = (url) => /^https:\/\/(my\.)?matterport\.com\/show\//i.test(url);
+// Matterport share links ("/show/?m=…") and Realsee short links embed
+// directly, as both services' own embed codes iframe that same URL. Anything
+// else becomes a button.
+const embeddable = (url) =>
+  /^https:\/\/(my\.)?matterport\.com\/show\//i.test(url) || /^https:\/\/([a-z0-9-]+\.)*realsee\.ai\//i.test(url);
 
 /* ---------- load content ---------- */
 const site = read("content/site.json");
@@ -120,7 +123,9 @@ const workCard = (w, i) => {
   const meta = [w.location, w.date].map((v) => String(v ?? "").trim()).filter(Boolean).map(esc).join(" · ");
   const frame = w.cover
     ? `<img src="${esc(w.cover)}" alt="" loading="lazy" decoding="async">`
-    : `<span class="work-empty">No image yet</span>`;
+    : w.tourUrl
+      ? `<span class="work-empty"><span class="brand-mark" aria-hidden="true"></span>3D tour</span>`
+      : `<span class="work-empty">No image yet</span>`;
   return `<li>
         <button class="work-card" type="button" data-open="work-${i}">
           <span class="work-frame">${frame}</span>
@@ -135,7 +140,7 @@ const workDialog = (w, i) => {
   const meta = [w.location, w.date].map((v) => String(v ?? "").trim()).filter(Boolean).map(esc).join(" · ");
   const tour = w.tourUrl
     ? embeddable(w.tourUrl)
-      ? `<div class="tour"><iframe data-src="${esc(w.tourUrl)}" title="3D tour of ${esc(w.title)}" allow="fullscreen; xr-spatial-tracking" allowfullscreen></iframe></div>
+      ? `<div class="tour"><iframe data-src="${esc(w.tourUrl)}" title="3D tour of ${esc(w.title)}" allow="fullscreen; xr-spatial-tracking; gyroscope; accelerometer" allowfullscreen></iframe></div>
           <p><a class="text-link" href="${esc(w.tourUrl)}" target="_blank" rel="noopener">Open the tour full screen</a></p>`
       : `<p><a class="button" href="${esc(w.tourUrl)}" target="_blank" rel="noopener">Open the 3D tour</a></p>`
     : "";
