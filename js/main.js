@@ -1433,7 +1433,9 @@ if (builder) {
       revealed = rec.pkg;
       result.classList.remove("is-revealing");
       void result.offsetWidth;
-      result.classList.add("is-revealing");
+      // With the header's eye about, it does the showing (see below).
+      if (result.dataset.guided) result.dispatchEvent(new CustomEvent("suggest"));
+      else result.classList.add("is-revealing");
     }
 
     result.querySelector("[data-builder-name]").textContent = rec.pkg;
@@ -1483,9 +1485,10 @@ if (builder) {
 // takes notice: now and then its pupil follows the cursor, always when the
 // cursor comes near, and when something is pressed it hops and looks at it.
 // And when Build your job comes into view, it flies down to help: it sits
-// beside each question in turn, hops as each is answered, perches on the
-// suggestion when that comes in, and flies home to the header when the
-// builder is scrolled away.
+// beside each question in turn and hops as each is answered. When a
+// suggestion comes, it pulls the card in, brings up each line of the price
+// and looks it over, glances at the Book button, and flies home to the
+// header, as it does when the builder is scrolled away.
 const brandEye = document.querySelector(".site-header .brand-eye");
 if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const REACH = 2.6; // how far the pupil moves in the 20-unit eye
@@ -1505,15 +1508,15 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
   const guide = brandEye.cloneNode(true);
   guide.classList.add("guide-eye");
   document.body.append(guide);
-  let out = false, target = null, flight = null, x = 0, y = 0, glance = null;
+  let out = false, target = null, flight = null, arrived = null, x = 0, y = 0, glance = null;
 
   const builder = document.querySelector("[data-builder]");
   const form = builder?.querySelector("[data-builder-form]");
   const result = builder?.querySelector("[data-builder-result]");
-  // Where to sit: just after a question's own words (not its hint), or
-  // perched on the top edge of the suggestion.
+  // Where to sit: just after a question's own words (not its hint). A
+  // target can also be a function, for a place that moves.
   const spotFor = (el) => {
-    if (el === result) { const r = result.getBoundingClientRect(); return [r.right - 40, r.top - 10]; }
+    if (typeof el === "function") return el();
     const legend = el.querySelector("legend");
     const words = legend.querySelector("label") || legend.firstChild;
     const range = document.createRange();
@@ -1521,20 +1524,24 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
     const rects = range.getClientRects(), line = rects[rects.length - 1] || legend.getBoundingClientRect();
     return [Math.min(line.right + 22, innerWidth - 16), line.top + line.height / 2];
   };
+  const shown = () => [...form.querySelectorAll(".q:not([hidden])")];
   const answered = (q) =>
     q.querySelector("input:checked") ||
     [...q.querySelectorAll('input[type="number"]')].some((i) => i.value) ||
     // Extras are optional: done once anything after them is answered.
-    (q.querySelector('input[type="checkbox"]') && [...form.querySelectorAll(".q:not([hidden])")].slice([...form.querySelectorAll(".q:not([hidden])")].indexOf(q) + 1).some((n) => n.querySelector("input:checked") || n.querySelector("input[type=number]")?.value));
-  const current = () => (!result.hidden ? result : [...form.querySelectorAll(".q:not([hidden])")].find((q) => !answered(q)) || null);
+    (q.querySelector('input[type="checkbox"]') && shown().slice(shown().indexOf(q) + 1).some(answered));
+  const current = () => shown().find((q) => !answered(q)) || null;
 
   // Off to a new place: a flight with a little arc, looking where it's
-  // headed, then it follows that place (through scrolling) until the next.
-  const flyTo = (spot) => {
+  // headed; then it stays with that place, through scrolling, until the
+  // next. Resolves on arrival. Home is beside the name, back in the header.
+  const flyTo = (spot) => new Promise((done) => {
+    arrived?.();
     target = spot;
     flight = { from: [x, y], t0: performance.now(), ms: 0 };
+    arrived = done;
     loop();
-  };
+  });
   const home = () => centre(brandEye);
   let running = false;
   const loop = () => {
@@ -1554,6 +1561,8 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
           aim(guide, glance);
           if (!target) { out = false; guide.classList.remove("is-out"); brandEye.style.visibility = ""; hop(brandEye, 3); }
           else hop(guide, 4);
+          arrived?.();
+          arrived = null;
         }
       } else { x = tx; y = ty; }
       // Placed with `translate`, leaving `transform` to its float and hops.
@@ -1563,36 +1572,134 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
     };
     requestAnimationFrame(frame);
   };
-  const firstStop = () => current() || form.querySelector(".q");
-  const goOut = () => {
-    if (out) { if (!target) flyTo(firstStop()); return; }
+  const leave = () => {
+    if (out) return;
     out = true;
     [x, y] = home();
     brandEye.style.visibility = "hidden";
     guide.classList.add("is-out");
-    flyTo(firstStop());
   };
-  const goHome = () => { if (out && target !== null) flyTo(null); };
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  const tween = (ms, fn) => new Promise((done) => {
+    const t0 = performance.now();
+    const step = (now) => {
+      const t = Math.min(1, (now - t0) / ms);
+      fn(t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+      t < 1 ? requestAnimationFrame(step) : done();
+    };
+    requestAnimationFrame(step);
+  });
+
+  // The suggestion, shown by the eye: held back until it arrives, pulled
+  // in from the side (or unfolded downward on phones), each line of the
+  // breakdown brought up and looked over in turn, a glance at the Book
+  // button, and home. Anything changed meanwhile starts it over.
+  let turn = 0, lastInput = 0, inspected = false, inView = false;
+  const rows = () => [...result.querySelectorAll(".breakdown tr")];
+  const unhold = () => {
+    result.style.opacity = result.style.translate = result.style.clipPath = "";
+    rows().forEach((r) => (r.style.opacity = ""));
+  };
+  const present = async () => {
+    const me = ++turn, stale = () => me !== turn;
+    inspected = false;
+    // Off screen (say, answers restored on reload), it waits to be seen.
+    if (!inView) return;
+    const phone = !matchMedia("(min-width: 821px)").matches;
+    const held = (k) => {
+      result.style.opacity = Math.min(1, k * 3).toFixed(2);
+      if (phone) result.style.clipPath = `inset(0 0 ${((1 - k) * 100).toFixed(1)}% 0 round 14px)`;
+      else result.style.translate = `${((1 - k) * 80).toFixed(1)}px 0`;
+    };
+    held(0);
+    rows().forEach((r) => (r.style.opacity = 0));
+    // Wait for typing to stop (this runs before the keystroke that set it
+    // off is counted, so count it here).
+    lastInput = performance.now();
+    while (performance.now() - lastInput < 700) { await wait(100); if (stale()) return; }
+    rows().forEach((r) => (r.style.opacity = 0));
+    leave();
+    let k = 0;
+    const edge = () => { const r = result.getBoundingClientRect(); return phone ? [r.right - 34, r.top + r.height * k] : [r.left - 4, r.top + 30]; };
+    // Bring the card into view if it's below the fold (phones, mostly).
+    result.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    await flyTo(edge);
+    if (stale()) return;
+    await tween(800, (e) => { k = e; held(e); });
+    if (stale()) return;
+    result.style.opacity = result.style.translate = result.style.clipPath = "";
+    await wait(250);
+    // Line by line: over to its price, the line comes up, a look and a nod.
+    for (let i = 0; i < rows().length; i++) {
+      const row = () => rows()[i];
+      await flyTo(() => { const r = row().getBoundingClientRect(); return [Math.min(r.right + 18, innerWidth - 14), r.top + r.height / 2]; });
+      if (stale() || !row()) return;
+      const price = row().lastElementChild;
+      glance = centre(price);
+      aim(guide, glance);
+      row().animate([{ opacity: 0, transform: "translateX(12px)" }, { opacity: 1, transform: "none" }], { duration: 350, easing: "ease-out" });
+      row().style.opacity = "";
+      await wait(450);
+      hop(guide, i === rows().length - 1 ? 7 : 3);
+      await wait(i === rows().length - 1 ? 700 : 350);
+      glance = null;
+      if (stale()) return;
+    }
+    const book = result.querySelector("[data-builder-book]");
+    await flyTo(() => { const r = book.getBoundingClientRect(); return [r.right + 18, r.top + r.height / 2]; });
+    if (stale()) return;
+    glance = centre(book);
+    aim(guide, glance);
+    hop(guide, 5);
+    await wait(900);
+    glance = null;
+    if (stale()) return;
+    inspected = true;
+    await flyTo(null);
+  };
+
+  // Out to the question in hand, or to show a suggestion not yet shown.
+  const goOut = () => {
+    if (!result.hidden && !inspected) { present(); return; }
+    const q = current();
+    if (!q) return;
+    leave();
+    flyTo(q);
+  };
+  const goHome = () => { if (out && target !== null) { turn++; unhold(); flyTo(null); } };
   // A beat after each answer, on to whatever comes next.
   let next = 0;
   const onward = (picked) => {
-    if (!out) return;
+    if (!inView) return;
+    if (!out) leave();
     glance = picked ? centre(picked) : null;
     aim(guide, glance);
     hop(guide, 5);
     clearTimeout(next);
     next = setTimeout(() => {
       glance = null;
+      // A fresh suggestion takes it from here.
+      if (!result.hidden && result.style.opacity !== "") return;
       const to = current();
-      if (to && to !== target) flyTo(to);
-      else aim(guide, null);
+      if (to) { if (to !== target) flyTo(to); }
+      else if (result.hidden || inspected) flyTo(null);
     }, 650);
   };
   if (form && "IntersectionObserver" in window) {
-    new IntersectionObserver(([e]) => (e.intersectionRatio > 0.25 ? goOut() : goHome()), { threshold: [0, 0.25] }).observe(builder);
+    result.dataset.guided = "1";
+    result.addEventListener("suggest", present);
+    new IntersectionObserver(([e]) => {
+      inView = e.intersectionRatio > 0.25;
+      inView ? goOut() : goHome();
+    }, { threshold: [0, 0.25] }).observe(builder);
     form.addEventListener("change", (e) => onward(e.target.closest("label") || e.target));
     // Typing a size: it watches, and moves on once the typing stops.
-    form.addEventListener("input", (e) => { if (e.target.type === "number") { clearTimeout(next); next = setTimeout(() => onward(e.target), 500); } });
+    form.addEventListener("input", (e) => {
+      if (e.target.type !== "number") return;
+      lastInput = performance.now();
+      clearTimeout(next);
+      next = setTimeout(() => onward(e.target), 500);
+    });
   }
 
   // ---- Paying attention ----
