@@ -82,6 +82,12 @@ nav a:hover { color: var(--text); }
 /* ---------- hero ---------- */
 .hero { padding: clamp(56px, 10vw, 120px) 0 clamp(48px, 8vw, 96px); }
 .hero-inner { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(32px, 6vw, 80px); align-items: center; }
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 14px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 20px;
+}
+.eyebrow::before { content: ""; width: 24px; height: 2px; background: var(--accent); }
 .hero h1 { font-size: clamp(38px, 6vw, 64px); font-weight: 700; margin-bottom: 20px; max-width: 12ch; }
 .lede { font-size: clamp(18px, 2vw, 20px); color: var(--muted); max-width: 34em; margin-bottom: 32px; }
 

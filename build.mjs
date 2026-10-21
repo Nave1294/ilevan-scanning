@@ -298,6 +298,7 @@ const home = page({
   body: `    <section class="hero">
       <div class="wrap hero-inner">
         <div class="hero-text">
+          ${site.eyebrow ? `<p class="eyebrow">${esc(site.eyebrow)}</p>` : ""}
           <h1>${esc(site.tagline)}</h1>
           <p class="lede">${esc(site.intro)}</p>
           <p><a class="button" href="book.html">${bookLabel}</a></p>

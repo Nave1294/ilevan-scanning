@@ -1,8 +1,9 @@
 {
   "name": "Ilevan Scanning",
   "siteUrl": "https://nave1294.github.io/ilevan-scanning/",
+  "eyebrow": "Residential & commercial",
   "tagline": "3D tours and floor plans for your listings.",
-  "intro": "Zillow and branded LiDAR tours, with floor plans custom-drafted by a Drexel-trained architectural designer. Book a scan and send buyers through the home before the first showing.",
+  "intro": "Zillow and branded LiDAR tours, with floor plans custom-drafted by a Drexel-trained architectural designer. Book a scan and let buyers and tenants walk the property before the first showing.",
   "ctaLabel": "Book a scan",
   "tiers": [
     {
@@ -80,7 +81,7 @@
     },
     {
       "title": "Scan",
-      "text": "We scan the home room by room. A typical rowhouse takes about 45 minutes on site."
+      "text": "We scan the property room by room. A typical rowhouse takes about 45 minutes on site."
     },
     {
       "title": "Receive",
