@@ -1780,10 +1780,9 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
 // (the kids play chase meanwhile), eat dinner round the table and have a
 // dance party. Then the kids get ready for bed: a bath, teeth brushed, tucked
 // in and read a story till they nod off, and the parents go to bed too.
-// Asleep, an eye stays round and its pupil closes. In the morning the kids
-// wake first and pile onto the big bed, the parents wake up to them, and
-// there they all stay, awake and still. Once through, a little over three
-// minutes, never repeated.
+// Asleep, an eye stays round and its pupil closes, and that's where it
+// ends: the house asleep, a z drifting up now and then. A little under
+// three minutes, never repeated.
 // On phones it sits below the buttons and starts when scrolled to. With
 // reduced motion (or without JavaScript) the plan is shown finished and
 // furnished.
@@ -1899,15 +1898,11 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     // A happy hop on the spot.
     hop(height = 8, ms = 380) { return tween(ms, (t) => { this.bobY = -height * Math.sin(Math.PI * t); this.place(); }, linear); }
     // Asleep: the eye stays round and the pupil closes, shrinking to
-    // nothing; in the morning it opens again.
+    // nothing.
     doze(ms = 1400) {
       this.lookAhead();
       const r = this.r * 0.36;
       return tween(ms, (t) => this.pupil.setAttribute("r", (r * (1 - t)).toFixed(2)));
-    }
-    wake(ms = 700) {
-      const r = this.r * 0.36;
-      return tween(ms, (t) => this.pupil.setAttribute("r", (r * t).toFixed(2)));
     }
   }
 
@@ -2126,7 +2121,6 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   // Getting the kids ready for bed: a bath (with bubbles) while a parent
   // keeps an eye on them and the other turns down their beds.
   const BEDS = [[225, 126], [305, 126]];
-  let blankets = [];
   const bathTime = async () => {
     partner.lookAt(kidA.x, kidA.y);
     await partner.hop(5);
@@ -2138,7 +2132,7 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     partner.lookAt(305, 54);
     me.lookAt(225, 130);
     // The beds turned down while the kids splash.
-    blankets = BEDS.map(([x]) => shape("rect", { class: "plan-blanket", x: x - 15, y: 134, width: 30, height: 22, rx: 3, opacity: 0 }));
+    const blankets = BEDS.map(([x]) => shape("rect", { class: "plan-blanket", x: x - 15, y: 134, width: 30, height: 22, rx: 3, opacity: 0 }));
     const turnDown = (async () => {
       for (const [k, b] of blankets.entries()) {
         me.lookAt(BEDS[k][0], 145);
@@ -2218,8 +2212,9 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await sleep(900);
   };
 
-  // The parents tiptoe off to bed, through the bathroom. Night: z's from
-  // both bedrooms for a while.
+  // The parents tiptoe off to bed, through the bathroom, and the house
+  // sleeps, which is where it ends: everyone asleep, a z now and then from
+  // each bedroom so it's plain they're sleeping.
   const night = async () => {
     await go([[me, 62, 100], [partner, 98, 100]]);
     await sleep(400);
@@ -2227,54 +2222,12 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     partner.lookAt(me.x, me.y);
     await sleep(700);
     await all(me.doze(1600), partner.doze(1800));
-    for (let n = 0; n < 6; n++) {
-      drift(shape("text", { class: "plan-z", x: 82 + n * 2, y: 90 }, fx, "z"), 30, 2200, 3);
+    for (let n = 0; ; n++) {
+      drift(shape("text", { class: "plan-z", x: 82 + (n % 3) * 2, y: 90 }, fx, "z"), 30, 2200, 3);
       if (n % 2) drift(shape("text", { class: "plan-z", x: 262, y: 118 }, fx, "z"), 22, 1800, 2);
-      await sleep(1300);
+      await sleep(n < 6 ? 1300 : 2600);
     }
-    await sleep(1500);
   };
-
-  // Morning. The sun comes up, the kids wake first and run through to the
-  // big bed, the parents wake up to them, and there the family stays.
-  const morning = async () => {
-    const sun = shape("g", { class: "plan-sun", opacity: 0 });
-    shape("circle", { cx: 0, cy: 0, r: 6 }, sun);
-    shape("path", { d: Array.from({ length: 8 }, (_, k) => { const a = (k * Math.PI) / 4, c = Math.cos(a), s = Math.sin(a); return `M${(9 * c).toFixed(1)} ${(9 * s).toFixed(1)} L${(13 * c).toFixed(1)} ${(13 * s).toFixed(1)}`; }).join(" ") }, sun);
-    await tween(2400, (t) => { sun.setAttribute("transform", `translate(474 ${(14 - 24 * t).toFixed(1)})`); sun.setAttribute("opacity", Math.min(1, t * 2)); });
-    await kidB.wake();
-    await kidB.blink();
-    kidB.lookAt(kidA.x, kidA.y);
-    await sleep(400);
-    await kidB.hop(6);
-    await kidA.wake(900);
-    kidA.lookAt(kidB.x, kidB.y);
-    await sleep(500);
-    await all(kidA.hop(8), kidB.hop(8));
-    await tween(500, (t) => blankets.forEach((b) => b.setAttribute("opacity", 1 - t)));
-    blankets.forEach((b) => b.remove());
-    await go([[kidA, 66, 130], [kidB, 94, 130]]);
-    // Bouncing on the big bed until the parents are up.
-    await all(kidA.hop(9), sleep(150).then(() => kidB.hop(9)));
-    await all(kidA.hop(9), sleep(150).then(() => kidB.hop(9)));
-    await partner.wake(900);
-    partner.lookAt(kidB.x, kidB.y);
-    await sleep(300);
-    await me.wake(1100);
-    await me.blink();
-    me.lookAt(kidA.x, kidA.y);
-    await sleep(600);
-    await all(...[me, partner, kidA, kidB].map((e, k) => sleep(k * 120).then(() => e.hop(e.r < 10 ? 8 : 5))));
-    me.lookAt(partner.x, partner.y);
-    partner.lookAt(me.x, me.y);
-    kidA.lookAt(me.x, me.y);
-    kidB.lookAt(partner.x, partner.y);
-  };
-
-  // Empty from the start, so a phone scrolling down to it never sees the
-  // finished plan vanish.
-  plan.querySelectorAll(".plan-item").forEach((el) => (el.style.opacity = 0));
-  walls.setAttribute("mask", "url(#plan-built)");
 
   const run = async () => {
     // In through the front door, then each room in turn.
@@ -2334,7 +2287,6 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await sleep(500);
     await storyTime();
     await night();
-    await morning();
   };
 
   // Only once the drawing is actually on screen: straight away on desktop,

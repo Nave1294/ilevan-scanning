@@ -65,11 +65,10 @@ const mailto = email ? `mailto:${email}?subject=${encodeURIComponent("Scan enqui
 // js/main.js brings it to life: the logo's eye comes in through the front
 // door, goes room to room through the doorways, sends out dotted lines of
 // sight, and each room's walls build in as it's scanned. Then it moves in,
-// furnishes the place, measures up, and welcomes its family; a whole evening
-// and night later, it ends the next morning with everyone awake on the big
-// bed. Each room's walls are revealed by a circle growing from the eye,
-// clipped to that room (with a little extra, so the walls on its edges come
-// too). Without JavaScript, or with reduced motion, it's simply the finished,
+// measures up, furnishes the place, and welcomes its family; a whole evening
+// later, it ends with everyone asleep. Each room's walls are revealed by a
+// circle growing from the eye, clipped to that room (with a little extra, so
+// the walls on its edges come too). Without JavaScript, or with reduced motion, it's simply the finished,
 // furnished plan.
 //
 // Rooms are listed in the order the eye scans them; doors join two rooms
