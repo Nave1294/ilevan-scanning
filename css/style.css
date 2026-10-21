@@ -482,6 +482,9 @@ html.is-sending { overflow: hidden; }
   .hero { padding: 36px 0 40px; }
   .hero-inner { display: block; }
   .lede-more { display: none; }
+  /* The strip's logo, small enough that the whole yard fits either side
+     of it, crate included: about a sixth of the column. */
+  .mascot .loader { width: min(110px, calc((100vw - 2 * var(--gutter)) / 6.5)); }
   /* The floor plan, under the buttons, the width of the column. */
   .hero-art { margin: 32px auto 0; max-width: 400px; }
   .eyebrow { font-size: 12px; margin-bottom: 14px; }

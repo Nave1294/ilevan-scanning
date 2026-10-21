@@ -290,8 +290,8 @@ const character = (svg, { roam } = {}) => {
   // Set out once the eye first starts and the screen's width is known, in
   // the drawing's units. On the i's side: a basketball hoop hung on the i
   // and its ball, a crate, and a patch of ice with a fishing hole. On the
-  // l's side: a football and, at the far end, three bowling pins. Narrower
-  // screens get what fits, from the letters outward. Footprints are x
+  // l's side: a football and, at the far end, three bowling pins. Phones
+  // draw the logo small enough that all of it fits, packed a little closer. Footprints are x
   // ranges; the eye's x offset is its left edge, so it overlaps something
   // when x + 310 > x0 and x < x1.
   const FLOOR = 1752;
@@ -345,20 +345,24 @@ const character = (svg, { roam } = {}) => {
       const rim = draw("line", { class: "ilv-rim", x1: x0, y1: y, x2: x1, y2: y }, yard.front);
       hoop = { x: (x0 + x1) / 2, x0, y, net, rim };
     }
+    // Beyond the hoop, its ball's resting place and the spot it shoots
+    // from; then, given room, the crate; then the ice, closer in if there's
+    // no crate.
     const L = [left, OUTSIDE.i - 120];
     const room = L[1] - L[0];
-    if (room > 1700) {
-      const x0 = L[1] - 1270, x1 = x0 + 300, top = FLOOR - 300;
+    const rest = L[1] - 320, spot = rest - 95 - 318;
+    if (hoop && room > 2200) {
+      const x1 = spot - 240, x0 = x1 - 300, top = FLOOR - 300;
       props.push({ x0, x1, top });
       const g = draw("g", { class: "ilv-prop" }, yard.back);
       draw("rect", { x: x0, y: top, width: 300, height: 300, rx: 14 }, g);
       draw("path", { d: `M${x0 + 30} ${top + 30} L${x0 + 270} ${FLOOR - 30} M${x0 + 270} ${top + 30} L${x0 + 30} ${FLOOR - 30}` }, g);
     }
-    if (room > 2400) {
-      const x = L[0] + 400, rx = 330;
+    if (hoop && room > 1420) {
+      const rx = 300, x = (props.length ? props[0].x0 - 300 : spot - 60) - rx;
       const g = draw("g", { class: "ilv-ice" }, yard.back);
       draw("ellipse", { cx: x, cy: FLOOR, rx, ry: 42 }, g);
-      draw("path", { class: "ilv-crack", d: `M${x - 250} ${FLOOR - 6} l60 10 l40 -8 M${x + 150} ${FLOOR + 14} l50 -10 l50 6` }, g);
+      draw("path", { class: "ilv-crack", d: `M${x - 230} ${FLOOR - 6} l60 10 l40 -8 M${x + 140} ${FLOOR + 14} l50 -10 l40 6` }, g);
       draw("ellipse", { class: "ilv-hole", cx: x, cy: FLOOR, rx: 82, ry: 17 }, g);
       ice = { x, x0: x - rx, x1: x + rx };
       fish = { el: draw("g", { class: "ilv-fish" }, yard.mid), x, y: FLOOR + 40, spin: 0 };
@@ -382,20 +386,21 @@ const character = (svg, { roam } = {}) => {
       gear = { rod, line, bobber, length: bob - tip.y };
     }
     if (hoop) {
-      const r = 95, x = L[1] - 320;
-      bball = makeBall(yard.mid, "ilv-bball", x, r,
+      const r = 95;
+      bball = makeBall(yard.mid, "ilv-bball", rest, r,
         `M${-r} 0 H${r} M0 ${-r} V${r} M${-0.72 * r} ${-0.69 * r} Q${-0.25 * r} 0 ${-0.72 * r} ${0.69 * r} M${0.72 * r} ${-0.69 * r} Q${0.25 * r} 0 ${0.72 * r} ${0.69 * r}`,
         [ice ? ice.x1 + 40 : L[0], L[1]]);
-      bball.rest = x;
-      // Where it shoots from: just left of where the ball comes to rest.
-      hoop.spot = x - r - 310 - 8;
+      bball.rest = rest;
+      hoop.spot = spot;
     }
 
     // The l's side: the bowling lane at the far end, and the football
-    // between it and the letters, kept clear of the lane.
-    const R = [OUTSIDE.l + 310 + 120, right + 310];
-    if (R[1] - R[0] > 2300) {
-      const x0 = R[1] - 500, xs = [x0, x0 + 105, x0 + 210];
+    // between it and the letters, kept clear of the lane. Short of room
+    // (phones), a shorter run-up, the pins closer together and the ball
+    // nearer the letters.
+    const R = [OUTSIDE.l + 310 + 120, right + 310], wide = R[1] - R[0] > 2800;
+    if (R[1] - R[0] > 2240) {
+      const x0 = R[1] - 500, gap = wide ? 105 : 80, xs = [x0, x0 + gap, x0 + 2 * gap];
       const els = xs.map((x) => {
         const el = draw("g", { class: "ilv-pin" }, yard.back);
         // About its base's right-hand corner, so it topples to the right.
@@ -405,10 +410,10 @@ const character = (svg, { roam } = {}) => {
         el.style.transform = pose(x + 18, FLOOR);
         return el;
       });
-      pins = { xs, els, start: x0 - 1040 };
+      pins = { xs, els, start: x0 - (wide ? 1040 : 840) };
     }
     if (R[1] - R[0] > 1100) {
-      const r = 110, x = R[0] + Math.min(500, (R[1] - R[0]) * 0.25);
+      const r = 110, x = R[0] + (pins && !wide ? 350 : Math.min(500, (R[1] - R[0]) * 0.25));
       ball = makeBall(yard.mid, "ilv-football", x, r, `M${-r} 0 Q0 -70 ${r} 0 M0 ${-r} Q60 0 0 ${r}`,
         [R[0] + 150, pins ? pins.start - 340 : R[1] - 450]);
       ball.kick = true;
@@ -892,7 +897,7 @@ const character = (svg, { roam } = {}) => {
           play(gear.rod, [{ transform: "none" }, { transform: "rotate(18deg)" }, { transform: "none" }], { duration: 500, easing: "ease-out" }),
           play(gear.line, [{ transform: "none" }, { transform: "scaleY(0.25)" }], { duration: 300, easing: "ease-out" }),
           play(gear.bobber, [{ opacity: 1 }, { opacity: 0 }], { duration: 200 }),
-          toss(fish, ice.x - 210, FLOOR - 30, FLOOR - 700, 900, -360),
+          toss(fish, ice.x - 190, FLOOR - 30, FLOOR - 700, 900, -360),
         ]);
         for (const s of [-24, 18, -10]) await toss(fish, fish.x, fish.y, fish.y - 60, 260, s);
         await cheer(2);
