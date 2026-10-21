@@ -1379,6 +1379,7 @@ if (builder) {
   const result = builder.querySelector("[data-builder-result]");
   const val = (name) => form.querySelector(`input[name="${name}"]:checked`)?.value;
   const show = (key, on) => form.querySelectorAll(`[data-show="${key}"]`).forEach((f) => (f.hidden = !on));
+  let revealed = "";
 
   // Which package answers the questions, and why, in one line.
   const recommend = () => {
@@ -1424,14 +1425,24 @@ if (builder) {
     const sqft = Number(form.querySelector("[data-builder-sqft]").value) || 0;
     const rec = answered && sqft > 0 && (!needsChanges || changes > 0) ? recommend() : null;
     result.hidden = !rec;
-    if (!rec) return;
+    if (!rec) { revealed = ""; return; }
+    // Each time a package is first suggested, the card comes in: over from
+    // the side beside the questions, unfolding beneath them on phones, the
+    // lines of the breakdown following one by one.
+    if (rec.pkg !== revealed) {
+      revealed = rec.pkg;
+      result.classList.remove("is-revealing");
+      void result.offsetWidth;
+      result.classList.add("is-revealing");
+    }
 
     result.querySelector("[data-builder-name]").textContent = rec.pkg;
     result.querySelector("[data-builder-why]").textContent = rec.why;
     const q = quote({ ...rec, sqft });
     const cell = (tag, text, cls) => Object.assign(document.createElement(tag), { textContent: text, className: cls || "" });
-    const rows = q.lines.map((l) => {
+    const rows = q.lines.map((l, i) => {
       const tr = document.createElement("tr");
+      tr.style.setProperty("--i", i);
       const what = cell("th", l.label);
       what.scope = "row";
       if (l.detail) what.append(cell("span", l.detail, "breakdown-detail"));
@@ -1440,6 +1451,7 @@ if (builder) {
     });
     const total = document.createElement("tr");
     total.className = "breakdown-total";
+    total.style.setProperty("--i", q.lines.length);
     total.append(cell("th", q.hosting ? "First invoice" : "Invoice"), cell("td", money(q.once + q.hosting)));
     total.firstChild.scope = "row";
     result.querySelector("[data-builder-breakdown]").replaceChildren(...rows, total);
@@ -1464,6 +1476,156 @@ if (builder) {
   form.addEventListener("input", update);
   form.addEventListener("change", update);
   form.addEventListener("submit", (e) => e.preventDefault());
+}
+
+// ---------- the eye beside the name, and its help with Build your job ----------
+// The header's eye floats and blinks by itself (css/style.css). Here it also
+// takes notice: now and then its pupil follows the cursor, always when the
+// cursor comes near, and when something is pressed it hops and looks at it.
+// And when Build your job comes into view, it flies down to help: it sits
+// beside each question in turn, hops as each is answered, perches on the
+// suggestion when that comes in, and flies home to the header when the
+// builder is scrolled away.
+const brandEye = document.querySelector(".site-header .brand-eye");
+if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  const REACH = 2.6; // how far the pupil moves in the 20-unit eye
+  const fine = matchMedia("(pointer: fine)").matches;
+  let pointer = null, curious = false;
+  const centre = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+  // Aim an eye's pupil at a point on screen, or back to the middle.
+  const aim = (svg, at) => {
+    const pupil = svg.querySelector(".brand-pupil");
+    if (!at) { pupil.style.transform = ""; return; }
+    const [x, y] = centre(svg), dx = at[0] - x, dy = at[1] - y, d = Math.hypot(dx, dy) || 1, k = Math.min(REACH, d / 12) / d;
+    pupil.style.transform = `translate(${(dx * k).toFixed(2)}px, ${(dy * k).toFixed(2)}px)`;
+  };
+  const hop = (el, h = 5) => el.animate([{ transform: "none" }, { transform: `translateY(${-h}px) scale(0.92, 1.08)`, offset: 0.4 }, { transform: "scale(1.06, 0.94)", offset: 0.75 }, { transform: "none" }], { duration: 420, easing: "ease-out", composite: "add" });
+
+  // ---- The guide: the same eye, out of the header and over the page ----
+  const guide = brandEye.cloneNode(true);
+  guide.classList.add("guide-eye");
+  document.body.append(guide);
+  let out = false, target = null, flight = null, x = 0, y = 0, glance = null;
+
+  const builder = document.querySelector("[data-builder]");
+  const form = builder?.querySelector("[data-builder-form]");
+  const result = builder?.querySelector("[data-builder-result]");
+  // Where to sit: just after a question's own words (not its hint), or
+  // perched on the top edge of the suggestion.
+  const spotFor = (el) => {
+    if (el === result) { const r = result.getBoundingClientRect(); return [r.right - 40, r.top - 10]; }
+    const legend = el.querySelector("legend");
+    const words = legend.querySelector("label") || legend.firstChild;
+    const range = document.createRange();
+    range.selectNodeContents(words);
+    const rects = range.getClientRects(), line = rects[rects.length - 1] || legend.getBoundingClientRect();
+    return [Math.min(line.right + 22, innerWidth - 16), line.top + line.height / 2];
+  };
+  const answered = (q) =>
+    q.querySelector("input:checked") ||
+    [...q.querySelectorAll('input[type="number"]')].some((i) => i.value) ||
+    // Extras are optional: done once anything after them is answered.
+    (q.querySelector('input[type="checkbox"]') && [...form.querySelectorAll(".q:not([hidden])")].slice([...form.querySelectorAll(".q:not([hidden])")].indexOf(q) + 1).some((n) => n.querySelector("input:checked") || n.querySelector("input[type=number]")?.value));
+  const current = () => (!result.hidden ? result : [...form.querySelectorAll(".q:not([hidden])")].find((q) => !answered(q)) || null);
+
+  // Off to a new place: a flight with a little arc, looking where it's
+  // headed, then it follows that place (through scrolling) until the next.
+  const flyTo = (spot) => {
+    target = spot;
+    flight = { from: [x, y], t0: performance.now(), ms: 0 };
+    loop();
+  };
+  const home = () => centre(brandEye);
+  let running = false;
+  const loop = () => {
+    if (running) return;
+    running = true;
+    const frame = (now) => {
+      const [tx, ty] = target ? spotFor(target) : home();
+      if (flight) {
+        const [fx, fy] = flight.from, d = Math.hypot(tx - fx, ty - fy);
+        flight.ms ||= Math.max(450, Math.min(1100, d * 1.1));
+        const t = Math.min(1, (now - flight.t0) / flight.ms), e = t < 0.5 ? 4 * t ** 3 : 1 - (-2 * t + 2) ** 3 / 2;
+        x = fx + (tx - fx) * e;
+        y = fy + (ty - fy) * e - Math.min(90, d * 0.3) * Math.sin(Math.PI * t);
+        aim(guide, [tx, ty]);
+        if (t >= 1) {
+          flight = null;
+          aim(guide, glance);
+          if (!target) { out = false; guide.classList.remove("is-out"); brandEye.style.visibility = ""; hop(brandEye, 3); }
+          else hop(guide, 4);
+        }
+      } else { x = tx; y = ty; }
+      // Placed with `translate`, leaving `transform` to its float and hops.
+      guide.style.translate = `${(x - 11).toFixed(1)}px ${(y - 11).toFixed(1)}px`;
+      if (out || flight) requestAnimationFrame(frame);
+      else running = false;
+    };
+    requestAnimationFrame(frame);
+  };
+  const firstStop = () => current() || form.querySelector(".q");
+  const goOut = () => {
+    if (out) { if (!target) flyTo(firstStop()); return; }
+    out = true;
+    [x, y] = home();
+    brandEye.style.visibility = "hidden";
+    guide.classList.add("is-out");
+    flyTo(firstStop());
+  };
+  const goHome = () => { if (out && target !== null) flyTo(null); };
+  // A beat after each answer, on to whatever comes next.
+  let next = 0;
+  const onward = (picked) => {
+    if (!out) return;
+    glance = picked ? centre(picked) : null;
+    aim(guide, glance);
+    hop(guide, 5);
+    clearTimeout(next);
+    next = setTimeout(() => {
+      glance = null;
+      const to = current();
+      if (to && to !== target) flyTo(to);
+      else aim(guide, null);
+    }, 650);
+  };
+  if (form && "IntersectionObserver" in window) {
+    new IntersectionObserver(([e]) => (e.intersectionRatio > 0.25 ? goOut() : goHome()), { threshold: [0, 0.25] }).observe(builder);
+    form.addEventListener("change", (e) => onward(e.target.closest("label") || e.target));
+    // Typing a size: it watches, and moves on once the typing stops.
+    form.addEventListener("input", (e) => { if (e.target.type === "number") { clearTimeout(next); next = setTimeout(() => onward(e.target), 500); } });
+  }
+
+  // ---- Paying attention ----
+  // Close by, it always watches the cursor; further off, only during a
+  // curious spell now and then.
+  const watch = () => {
+    if (!pointer) return;
+    for (const svg of [brandEye, guide]) {
+      if (svg === guide ? !out || flight || glance : out) continue;
+      const [cx, cy] = centre(svg), near = Math.hypot(pointer[0] - cx, pointer[1] - cy) < 320;
+      svg.classList.toggle("is-watching", near || curious);
+      aim(svg, near || curious ? pointer : null);
+    }
+  };
+  if (fine) {
+    addEventListener("pointermove", (e) => { pointer = [e.clientX, e.clientY]; watch(); }, { passive: true });
+    const spell = () => setTimeout(() => {
+      curious = true;
+      watch();
+      setTimeout(() => { curious = false; watch(); spell(); }, 2500 + Math.random() * 2500);
+    }, 7000 + Math.random() * 9000);
+    spell();
+  }
+  // Something pressed: a hop and a look at it.
+  addEventListener("click", (e) => {
+    const hit = e.target.closest("a, button, label, input");
+    if (!hit || builder?.contains(hit)) return;
+    const svg = out ? guide : brandEye, at = centre(hit);
+    svg.classList.add("is-watching");
+    aim(svg, at);
+    hop(svg, 5);
+    setTimeout(() => { svg.classList.remove("is-watching"); aim(svg, null); watch(); }, 1200);
+  });
 }
 
 // ---------- hero: the eye scans, builds, then lives in the floor plan ----------

@@ -69,7 +69,13 @@ a { color: inherit; }
   24%, 30% { transform: translate(-2.6px, 0.4px); }
   66%, 72% { transform: translate(2.6px, -0.6px); }
 }
-@media (prefers-reduced-motion: reduce) { .brand-eye, .brand-eye * { animation: none !important; } }
+/* Watching the cursor, its own glancing gives way. */
+.brand-eye.is-watching .brand-pupil { animation: none; transition: transform 0.15s ease-out; }
+/* Out helping with Build your job: the same eye, a little bigger, over the
+   page. */
+.guide-eye { position: fixed; left: 0; top: 0; z-index: 20; width: 22px; height: 22px; pointer-events: none; display: none; }
+.guide-eye.is-out { display: block; }
+@media (prefers-reduced-motion: reduce) { .brand-eye, .brand-eye *, .guide-eye { animation: none !important; } }
 .brand-mark {
   width: 18px; height: 18px; border-radius: 50%;
   border: 2px solid var(--accent);
@@ -373,6 +379,12 @@ nav a:hover { color: var(--text); }
 .q input[type="number"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
 .builder-result { position: sticky; top: 96px; border: 1px solid var(--accent); box-shadow: inset 0 0 0 1px var(--accent); border-radius: var(--radius); padding: 28px; }
 .builder-result[hidden] { display: none; }
+/* A suggestion comes in from the side, its lines following one by one. */
+.builder-result.is-revealing { animation: result-in 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.builder-result.is-revealing .breakdown tr { animation: line-in 0.4s ease-out both; animation-delay: calc(0.3s + var(--i, 0) * 0.08s); }
+@keyframes result-in { from { opacity: 0; transform: translateX(48px); } }
+@keyframes line-in { from { opacity: 0; transform: translateX(16px); } }
+@media (prefers-reduced-motion: reduce) { .builder-result.is-revealing, .builder-result.is-revealing .breakdown tr { animation: none; } }
 .builder-result h3 { font-size: 28px; margin-bottom: 8px; }
 .builder-why { color: var(--muted); }
 .builder-estimate { font-weight: 600; margin-bottom: 20px; }
@@ -526,6 +538,9 @@ body:has(.thanks) { animation: page-in 0.6s ease both; }
   .chip { -webkit-tap-highlight-color: transparent; user-select: none; }
   .q input[type="number"] { width: 100%; }
   .builder-result { position: static; margin-top: 24px; padding: 22px; border-radius: 14px; background: var(--bg); }
+  /* On phones the suggestion unfolds downward beneath the questions. */
+  .builder-result.is-revealing { animation-name: result-unfold; }
+  @keyframes result-unfold { from { opacity: 0; clip-path: inset(0 0 100% 0 round 14px); } to { clip-path: inset(0 0 0 0 round 14px); } }
   .builder-result h3 { font-size: 24px; }
   .builder-result .button { display: block; text-align: center; }
 
