@@ -298,7 +298,7 @@ const choice = (name, value, label, extra = "") =>
 const tick = (a) =>
   `<label class="chip"><input type="checkbox" data-builder-addon value="${esc(a.name)}"${a.per === "changes" ? " data-per-changes" : ""}><span>${esc(a.name)}</span></label>`;
 
-const builderSection = `<section class="section" id="builder" aria-labelledby="builder-heading" hidden data-builder>
+const builderSection = `<section class="section section-alt" id="builder" aria-labelledby="builder-heading" hidden data-builder>
       <div class="wrap builder">
         <div class="section-head section-head-stack">
           <h2 id="builder-heading">Build your job</h2>
@@ -364,10 +364,10 @@ const icon = (k) =>
 // Only sections that exist get a button. Phones only; desktop keeps the
 // header links.
 const railItems = [
+  ["builder", "Build your job", true],
   ["pricing", "Pricing", true],
   ["compare", "Tours", !!compareSection],
   ["plans", "Schematic plans", !!plansSection],
-  ["builder", "Build your job", true],
   ["work", "Work", hasWork],
 ].filter(([, , on]) => on);
 const rail = `<nav class="rail" aria-label="Sections">
@@ -449,6 +449,8 @@ const home = page({
       </div>
     </section>
 
+    ${builderSection}
+
     <section class="section" id="pricing" aria-labelledby="pricing-heading">
       <div class="wrap">
         <div class="section-head">
@@ -469,8 +471,6 @@ const home = page({
     ${compareSection}
 
     ${plansSection}
-
-    ${builderSection}
 
     <section class="section section-alt" aria-labelledby="process-heading">
       <div class="wrap">
