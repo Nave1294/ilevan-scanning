@@ -498,6 +498,18 @@ if (booking) {
   const wait = booking.querySelector("[data-book-wait]");
   const slowNote = booking.querySelector("[data-book-slow]");
   const status = booking.querySelector("[data-book-status]");
+  // The sending screen fades in over the page, and out again on failure.
+  // The page behind it doesn't scroll while it's up.
+  const showScreen = (on) => {
+    document.documentElement.classList.toggle("is-sending", on);
+    if (on) {
+      wait.hidden = false;
+      requestAnimationFrame(() => requestAnimationFrame(() => wait.classList.add("is-shown")));
+    } else {
+      wait.classList.remove("is-shown");
+      setTimeout(() => (wait.hidden = true), 260);
+    }
+  };
 
   const loader = wait.querySelector(".loader") ? character(wait.querySelector(".loader")) : null;
   const failed = booking.querySelector("[data-book-error]");
@@ -509,13 +521,13 @@ if (booking) {
       // Disabled while sending, so an impatient second tap can't book twice.
       send.disabled = true;
       send.textContent = "Sending…";
-      // The bouncing logo shows at once. FormSubmit sends the email before
-      // it answers, which can take a while, so after a moment say so too.
-      wait.hidden = false;
-      slowNote.hidden = true;
+      // A sending screen over the page: the eye in the middle, the
+      // please-wait message under it. FormSubmit sends the email before it
+      // answers, which can take a while.
       status.textContent = "Sending your request…";
+      slowNote.hidden = false;
+      showScreen(true);
       loader?.start();
-      const slow = setTimeout(() => (slowNote.hidden = false), 3000);
       const data = new FormData(booking);
       let ok = false;
       try {
@@ -525,7 +537,6 @@ if (booking) {
       } catch {
         ok = false;
       }
-      clearTimeout(slow);
       if (ok) {
         // Coming back with the Back button restores this page as it was
         // left, mid-wink; reset it to a fresh form.
@@ -541,7 +552,7 @@ if (booking) {
       const lines = [...data.entries()].filter(([k, v]) => !k.startsWith("_") && String(v).trim()).map(([k, v]) => `${k}: ${v}`);
       mailto.href = `mailto:${booking.dataset.mailto}?subject=${encodeURIComponent(subject.value)}&body=${encodeURIComponent(lines.join("\n"))}`;
       loader?.stop();
-      wait.hidden = true;
+      showScreen(false);
       failed.hidden = false;
       send.disabled = false;
       send.textContent = "Send booking request";

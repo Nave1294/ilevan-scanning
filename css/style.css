@@ -366,12 +366,21 @@ nav a:hover { color: var(--text); }
 .send-error-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin: 0 !important; }
 .send-error .text-link { border: 0; background: none; padding: 0; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; text-decoration: underline; }
 .booking button[disabled] { opacity: 0.6; cursor: progress; }
-/* While sending: the logo's dot bouncing on its i, beside the status. */
-.send-wait { display: flex; align-items: center; gap: 16px; margin-top: 16px; }
-.send-wait[hidden] { display: none; }
-.send-wait .loader { flex: none; width: 46px; height: auto; }
-.send-wait p { margin: 0; font-size: 15px; color: var(--muted); }
-.send-wait strong { color: var(--text); font-weight: 600; }
+/* While sending: a screen of its own over the page, the eye in the middle
+   and the please-wait message beneath it. */
+.sending-screen {
+  position: fixed; inset: 0; z-index: 100;
+  display: grid; place-items: center; padding: 24px;
+  background: var(--bg); opacity: 0; transition: opacity 0.25s ease;
+}
+.sending-screen[hidden] { display: none; }
+.sending-screen.is-shown { opacity: 1; }
+.sending-inner { display: grid; justify-items: center; max-width: 360px; text-align: center; }
+.sending-screen .loader { width: clamp(96px, 22vw, 128px); height: auto; margin-bottom: 32px; }
+.sending-title { margin: 0 0 8px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.sending-note { margin: 0; font-size: 15px; color: var(--muted); }
+.sending-note[hidden] { display: none; }
+html.is-sending { overflow: hidden; }
 
 /* ---------- booking form: job summary ---------- */
 .job-summary { grid-column: 1 / -1; border: 1px solid var(--accent); box-shadow: inset 0 0 0 1px var(--accent); border-radius: var(--radius); padding: 18px 20px; }
