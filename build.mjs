@@ -239,7 +239,12 @@ const compareSection = compareOptions
 /* ---------- shared frame ----------
    On the home page the nav jumps within the page; elsewhere it links back to
    the home page's sections. */
-const page = ({ title, desc = description, home = false, body }) => {
+// Link previews (iMessage, Facebook, LinkedIn) need absolute URLs; a relative
+// og:image is ignored by most of them. Change siteUrl when a custom domain
+// goes live.
+const siteUrl = String(site.siteUrl || "").trim().replace(/\/?$/, "/").replace(/^\/$/, "");
+
+const page = ({ title, desc = description, home = false, path = "", body }) => {
   const at = home ? "" : "index.html";
   return `<!doctype html>
 <html lang="en">
@@ -248,9 +253,16 @@ const page = ({ title, desc = description, home = false, body }) => {
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>${title}</title>
   <meta name="description" content="${desc}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="${name}">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${desc}">
-  ${work[0]?.cover ? `<meta property="og:image" content="${esc(work[0].cover)}">` : ""}
+  ${siteUrl ? `<meta property="og:url" content="${esc(siteUrl + path)}">
+  <meta property="og:image" content="${esc(siteUrl + "assets/brand/og-image.png")}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="${name} logo">
+  <meta name="twitter:card" content="summary_large_image">` : ""}
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23111'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23fff'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23fff' stroke-width='2' opacity='.5'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="css/style.css?v=${version("css/style.css")}">
   <script defer src="js/main.js?v=${version("js/main.js")}"></script>
@@ -360,6 +372,7 @@ const field = (id, label, input, hint = "") =>
 const req = `<span class="req" aria-hidden="true">*</span>`;
 
 const book = page({
+  path: "book.html",
   title: `${bookLabel} · ${name}`,
   body: `    <section class="section form-section">
       <div class="wrap form-layout">
@@ -413,6 +426,7 @@ const book = page({
 });
 
 const thanks = page({
+  path: "thanks.html",
   title: `Thanks · ${name}`,
   body: `    <section class="section form-section">
       <div class="wrap thanks">

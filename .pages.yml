@@ -90,6 +90,7 @@ content:
     format: json
     fields:
       - { name: name, label: Business name, type: string }
+      - { name: siteUrl, label: Site address, type: string, description: "The site's full address, ending in /. Used for link previews. Change it when a custom domain goes live." }
       - { name: tagline, label: Headline, type: string }
       - { name: intro, label: Intro, type: text }
       - { name: ctaLabel, label: Button text, type: string }
