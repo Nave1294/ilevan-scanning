@@ -1097,11 +1097,11 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   // logo's eye is already drawn; the family are added as they arrive.
   const FRONT = [315, 20]; // the opening in the bathroom's top wall
   class Eye {
-    constructor({ el = null, r = 10, colour = "var(--text)", x = FRONT[0], y = -26 } = {}) {
+    constructor({ el = null, r = 10, x = FRONT[0], y = -26 } = {}) {
       if (!el) {
         el = shape("g", { class: "plan-eye" }, plan);
         plan.insertBefore(el, plan.querySelector(".plan-eye"));
-        shape("circle", { class: "plan-eye-ball", r, style: `fill: ${colour}` }, el);
+        shape("circle", { class: "plan-eye-ball", r }, el);
         shape("circle", { class: "plan-eye-pupil", r: (r * 0.36).toFixed(2) }, el);
       }
       this.el = el;
@@ -1217,9 +1217,9 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     me.lookAt(315, 0);
     await sleep(500);
     await me.hop(6);
-    partner = new Eye({ colour: "var(--accent)" });
+    partner = new Eye();
     kidA = new Eye({ r: 6.5 });
-    kidB = new Eye({ r: 6.5, colour: "var(--accent)" });
+    kidB = new Eye({ r: 6.5 });
     family = [partner, kidA, kidB];
     // Step aside to let them in.
     await me.glide(272, 70);
