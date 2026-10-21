@@ -93,13 +93,23 @@ content:
       - { name: tagline, label: Headline, type: string }
       - { name: intro, label: Intro, type: text }
       - { name: ctaLabel, label: Button text, type: string }
-      - name: services
-        label: Services
+      - name: tiers
+        label: Pricing tiers
         type: object
         list: true
+        description: "Prices are numbers, and the card text and the size estimator are both worked out from them. A tier uses either Flat price or Per sq ft, not both: leave the other at 0."
         fields:
-          - { name: title, label: Title, type: string }
-          - { name: text, label: Description, type: text }
+          - { name: name, label: Tier name, type: string }
+          - { name: includes, label: What's included, type: text }
+          - { name: flat, label: Flat price ($), type: number, description: "e.g. 89. Leave 0 for per-square-foot tiers." }
+          - { name: flatUpTo, label: Flat price covers up to (sq ft), type: number, description: "e.g. 2000" }
+          - { name: overRate, label: Extra per sq ft above that ($), type: number, description: "e.g. 0.03" }
+          - { name: rate, label: Per sq ft ($), type: number, description: "e.g. 0.10. Leave 0 for flat-price tiers." }
+          - { name: min, label: Minimum ($), type: number, description: "e.g. 159" }
+          - { name: hosting, label: Hosting per month ($), type: number, description: "Added to the first invoice. 0 if hosting is free." }
+          - { name: hostingNote, label: Hosting note, type: string, description: 'Shown when hosting is 0, e.g. "Hosting free on Zillow".' }
+          - { name: featured, label: Highlight this tier, type: boolean }
+      - { name: pricingNote, label: Note under pricing, type: text }
       - name: steps
         label: How it works
         type: object

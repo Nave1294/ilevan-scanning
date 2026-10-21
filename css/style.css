@@ -110,12 +110,30 @@ nav a:hover { color: var(--text); }
 .section-head h2 { font-size: clamp(28px, 4vw, 40px); }
 .section-head p { color: var(--muted); margin: 0; }
 
-.cards, .steps, .work-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
-.cards { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-.card { border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
-.card-num { display: block; color: var(--accent); font-size: 13px; font-weight: 600; letter-spacing: 0.08em; margin-bottom: 40px; }
-.card h3 { font-size: 21px; margin-bottom: 10px; }
-.card p { color: var(--muted); margin: 0; }
+.tiers, .steps, .work-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: 20px; }
+
+/* ---------- pricing ---------- */
+.tiers { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-items: stretch; }
+.tier { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius); padding: 28px; }
+.tier-featured { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.tier h3 { font-size: 15px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin-bottom: 12px; }
+.tier-includes { font-size: 18px; font-weight: 550; line-height: 1.4; margin-bottom: 28px; }
+.tier-price { margin: auto 0 8px; display: flex; align-items: baseline; gap: 6px; }
+.tier-amount { font-size: 40px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.tier-unit { color: var(--muted); }
+.tier-terms { list-style: none; margin: 0; padding: 0; color: var(--muted); font-size: 15px; }
+.tier-estimate { margin: 20px 0 0; padding-top: 16px; border-top: 1px solid var(--border); font-size: 15px; color: var(--muted); }
+.tier-estimate strong { color: var(--text); font-size: 18px; margin-left: 4px; }
+.pricing-note { color: var(--muted); font-size: 14px; margin: 24px 0 0; max-width: 46em; }
+
+.estimator { display: inline-flex; align-items: center; gap: 10px; font-size: 15px; color: var(--muted); }
+.estimator[hidden], .tier-estimate[hidden] { display: none; }
+.estimator input {
+  width: 110px; padding: 9px 12px;
+  font: inherit; font-size: 16px; color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+}
+.estimator input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
 
 .steps { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 32px; }
 .step-num {
@@ -201,6 +219,7 @@ nav a:hover { color: var(--text); }
   .contact { align-items: start; }
 }
 @media (max-width: 480px) {
-  nav a[href="#services"] { display: none; }
+  .header-inner { height: 56px; }
+  nav { gap: 14px; font-size: 14px; }
   .work-grid { grid-template-columns: 1fr; }
 }

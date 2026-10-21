@@ -76,14 +76,34 @@ const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focu
   <circle class="plan-scanner" cx="250" cy="270" r="6"/>
 </svg>`;
 
-const services = (site.services || [])
-  .map(
-    (s, i) => `<li class="card">
-        <span class="card-num">${String(i + 1).padStart(2, "0")}</span>
-        <h3>${esc(s.title)}</h3>
-        <p>${esc(s.text)}</p>
-      </li>`
-  )
+const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+const money = (n) => "$" + (Number.isInteger(n) ? n.toLocaleString("en-US") : n.toFixed(2));
+const sqft = (n) => n.toLocaleString("en-US") + " sq ft";
+
+// Prices are stored as numbers, not prose, so the card text and the
+// estimator are worked out from the same figures and can never disagree.
+const tiers = (site.tiers || [])
+  .map((t) => {
+    const flat = num(t.flat), upTo = num(t.flatUpTo), over = num(t.overRate);
+    const rate = num(t.rate), min = num(t.min), hosting = num(t.hosting);
+    const price = flat
+      ? `<span class="tier-amount">${money(flat)}</span><span class="tier-unit">flat</span>`
+      : `<span class="tier-amount">${money(rate)}</span><span class="tier-unit">/sq ft</span>`;
+    const detail = flat
+      ? [upTo ? `Up to ${sqft(upTo)}` : "", over ? `then ${money(over)}/sq ft` : ""].filter(Boolean).join(", ")
+      : min ? `${money(min)} minimum` : "";
+    const host = hosting ? `+ ${money(hosting)}/mo hosting` : t.hostingNote || "";
+    return `<li class="tier${t.featured ? " tier-featured" : ""}" data-flat="${flat}" data-up-to="${upTo}" data-over="${over}" data-rate="${rate}" data-min="${min}" data-hosting="${hosting}">
+        <h3>${esc(t.name)}</h3>
+        <p class="tier-includes">${esc(t.includes)}</p>
+        <p class="tier-price">${price}</p>
+        <ul class="tier-terms">
+          ${detail ? `<li>${esc(detail)}</li>` : ""}
+          ${host ? `<li>${esc(host)}</li>` : ""}
+        </ul>
+        <p class="tier-estimate" hidden>First invoice <strong data-estimate></strong></p>
+      </li>`;
+  })
   .join("\n      ");
 
 const steps = (site.steps || [])
@@ -192,7 +212,7 @@ const html = `<!doctype html>
     <div class="wrap header-inner">
       <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
       <nav aria-label="Main">
-        <a href="#services">Services</a>
+        <a href="#pricing">Pricing</a>
         ${hasWork ? `<a href="#work">Work</a>` : ""}
         <a href="#contact">Contact</a>
       </nav>
@@ -211,14 +231,20 @@ const html = `<!doctype html>
       </div>
     </section>
 
-    <section class="section" id="services" aria-labelledby="services-heading">
+    <section class="section" id="pricing" aria-labelledby="pricing-heading">
       <div class="wrap">
         <div class="section-head">
-          <h2 id="services-heading">Services</h2>
+          <h2 id="pricing-heading">Pricing</h2>
+          <label class="estimator" hidden>
+            <span>Home size</span>
+            <input type="number" inputmode="numeric" min="100" step="50" value="1500" data-sqft>
+            <span>sq ft</span>
+          </label>
         </div>
-        <ul class="cards">
-      ${services}
+        <ul class="tiers">
+      ${tiers}
         </ul>
+        ${site.pricingNote ? `<p class="pricing-note">${esc(site.pricingNote)}</p>` : ""}
       </div>
     </section>
 

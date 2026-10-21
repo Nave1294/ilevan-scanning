@@ -1,39 +1,64 @@
 {
   "name": "Ilevan Scanning",
-  "tagline": "Accurate 3D scans of your home.",
-  "intro": "We capture every room in millimetre detail, then turn the scan into a walkable virtual tour, measured floor plans, and files your architect or contractor can build from.",
+  "tagline": "3D tours and floor plans for your listings.",
+  "intro": "Zillow and branded LiDAR tours, with floor plans custom-drafted by a Drexel-trained architectural designer. Book a scan and send buyers through the home before the first showing.",
   "ctaLabel": "Book a scan",
-  "services": [
+  "tiers": [
     {
-      "title": "Virtual tours",
-      "text": "A walkable 3D model of the home, ready to share with buyers, renters, or family who can't visit in person."
+      "name": "Basic",
+      "includes": "Zillow 3D tour + interactive floor plan",
+      "flat": 89,
+      "flatUpTo": 2000,
+      "overRate": 0.03,
+      "rate": 0,
+      "min": 0,
+      "hosting": 0,
+      "hostingNote": "Hosting free on Zillow",
+      "featured": false
     },
     {
-      "title": "Measured floor plans",
-      "text": "Clean, dimensioned plans of every level, drawn from the scan rather than a tape measure."
+      "name": "Pro",
+      "includes": "Branded Realsee LiDAR tour + custom-drafted floor plan",
+      "flat": 0,
+      "flatUpTo": 0,
+      "overRate": 0,
+      "rate": 0.10,
+      "min": 159,
+      "hosting": 10,
+      "hostingNote": "",
+      "featured": true
     },
     {
-      "title": "As-built files",
-      "text": "Point clouds and CAD-ready drawings for renovation, so design starts from what's actually there."
+      "name": "Complete",
+      "includes": "Everything in Basic and Pro: both tours and the custom-drafted floor plan",
+      "flat": 0,
+      "flatUpTo": 0,
+      "overRate": 0,
+      "rate": 0.12,
+      "min": 199,
+      "hosting": 10,
+      "hostingNote": "",
+      "featured": false
     }
   ],
+  "pricingNote": "The first invoice includes the first month of hosting. Floor plan dimensions are approximate and for marketing purposes only.",
   "steps": [
     {
       "title": "Book",
-      "text": "Tell us the address, the size of the home, and what you need the scan for."
+      "text": "Send the address, the square footage, and the package you want."
     },
     {
       "title": "Scan",
-      "text": "We visit and scan room by room. Most homes take one to three hours."
+      "text": "We scan the home room by room. A typical rowhouse takes about 45 minutes on site."
     },
     {
       "title": "Receive",
-      "text": "Your tour, plans, and files arrive by link, usually within a few days."
+      "text": "Your tour link and drafted floor plan arrive by email, ready for the listing."
     }
   ],
-  "workIntro": "A selection of recent scans.",
-  "about": "Ilevan Scanning is run by people trained in architecture, so we know what a good set of existing-conditions drawings needs to show.",
-  "area": "Serving [your area].",
+  "workIntro": "Recent tours and floor plans.",
+  "about": "Every floor plan is drafted by a Drexel-trained architectural designer, not generated automatically from the scan.",
+  "area": "Serving Philadelphia and nearby.",
   "email": "hello@example.com",
   "phone": ""
 }
