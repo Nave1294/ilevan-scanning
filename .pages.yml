@@ -74,7 +74,7 @@ content:
         label: Gallery
         type: object
         list: true
-        description: Renders, floor plans, point-cloud views. Shown full width and never cropped.
+        description: Marketing plans, schematic plans, renders, point-cloud views. Shown full width and never cropped.
         fields:
           - name: src
             label: Image
@@ -132,7 +132,7 @@ content:
       - name: plans
         label: Schematic plans
         type: object
-        description: "The schematic plans section and booking option. Prices work like the tiers: Flat price, or Per sq ft with a Minimum. Leave both at 0 to show Quoted."
+        description: "The schematic plans section and booking option. Say \"schematic plan\" here, never \"floor plan\" or \"marketing plan\". Prices work like the tiers: Flat price, or Per sq ft with a Minimum. Leave both at 0 to show Quoted."
         fields:
           - { name: heading, label: Heading, type: string }
           - { name: intro, label: Intro, type: text }

@@ -310,7 +310,7 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
       <a class="brand" href="${home ? "#top" : "index.html"}"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
       <nav aria-label="Main">
         <a href="${at}#pricing">Pricing</a>
-        ${plansSection ? `<a href="${at}#plans">Plans</a>` : ""}
+        ${plansSection ? `<a href="${at}#plans">Schematic plans</a>` : ""}
         ${hasWork ? `<a href="${at}#work">Work</a>` : ""}
         <a href="book.html">Book</a>
       </nav>

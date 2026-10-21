@@ -3,12 +3,12 @@
   "siteUrl": "https://nave1294.github.io/ilevan-scanning/",
   "eyebrow": "Residential & commercial",
   "tagline": "3D tours and schematic plans.",
-  "intro": "Branded and Zillow 3D tours for listings, and measured schematic plans for renovations and additions. Every drawing is drafted by a Drexel-trained architectural designer.",
+  "intro": "3D tours and marketing plans for listings, and schematic plans for renovations and additions. Every marketing plan and schematic plan is drafted by a Drexel-trained architectural designer.",
   "ctaLabel": "Book a scan",
   "tiers": [
     {
       "name": "Basic",
-      "includes": "Zillow 3D tour + interactive floor plan",
+      "includes": "Zillow 3D tour + Zillow plan",
       "flat": 89,
       "flatUpTo": 2000,
       "overRate": 0.03,
@@ -20,7 +20,7 @@
     },
     {
       "name": "Pro",
-      "includes": "Branded Realsee LiDAR tour + custom-drafted floor plan",
+      "includes": "Branded Realsee LiDAR tour + custom-drafted marketing plan",
       "flat": 0,
       "flatUpTo": 0,
       "overRate": 0,
@@ -32,7 +32,7 @@
     },
     {
       "name": "Complete",
-      "includes": "Everything in Basic and Pro: both tours and the custom-drafted floor plan",
+      "includes": "Everything in Basic and Pro: both tours, the Zillow plan and the marketing plan",
       "flat": 0,
       "flatUpTo": 0,
       "overRate": 0,
@@ -43,7 +43,7 @@
       "featured": false
     }
   ],
-  "pricingNote": "The first invoice includes the first month of hosting. Tour floor plans are approximate and for marketing purposes only.",
+  "pricingNote": "The first invoice includes the first month of hosting. Zillow plans and marketing plans are approximate and for marketing purposes only.",
   "compare": {
     "heading": "Zillow tour or branded tour?",
     "intro": "Both are walkable 3D tours. The difference is whose name is on them, and where they work best.",
@@ -52,7 +52,7 @@
         "title": "Zillow 3D tour",
         "tag": "Basic",
         "points": [
-          "Built for your Zillow listing, where it sits alongside the photos.",
+          "Built for your Zillow listing, where it sits alongside the photos, with a Zillow plan generated from the tour.",
           "Zillow is a residential marketplace, so the tour suits homes rather than commercial or mixed-use space.",
           "Plays in Zillow's viewer, with Zillow's look and branding. There's no room for your logo or contact details.",
           "Shareable by link, but every view runs on Zillow's platform and is presented their way.",
@@ -66,7 +66,7 @@
           "Carries your branding, so the tour markets you wherever it's shared.",
           "Embed it on your own website, or send it by text, email and social with no Zillow page around it.",
           "Works for any property, from a rowhouse to commercial and mixed-use buildings.",
-          "Captured with a LiDAR scanner, which measures each room as it scans, and comes with a floor plan drafted from it.",
+          "Captured with a LiDAR scanner, which measures each room as it scans, and comes with a marketing plan drafted from it.",
           "Stays live for as long as hosting continues."
         ],
         "featured": true
@@ -76,9 +76,9 @@
   },
   "plans": {
     "heading": "Schematic plans",
-    "intro": "More than a virtual tour. The same scan becomes measured drawings of the building as it stands, ready for a renovation, an addition, or an architect to design from.",
+    "intro": "More than a virtual tour. The same scan becomes a schematic plan of the building as it stands, ready for a renovation, an addition, or an architect to design from.",
     "name": "Existing conditions",
-    "includes": "Dimensioned floor plans of every level, drawn from the scan.",
+    "includes": "A dimensioned schematic plan of every level, drawn from the scan.",
     "flat": 0,
     "rate": 0,
     "min": 0,
@@ -91,12 +91,12 @@
       },
       {
         "name": "Proposed layout",
-        "text": "Schematic drawings of proposed changes, such as a new layout or an addition, to plan and price the work.",
+        "text": "A schematic plan of proposed changes, such as a new layout or an addition, to work out and price the job.",
         "flat": 0,
         "rate": 0
       }
     ],
-    "note": "Schematic drawings are for planning and discussion. They are not construction documents and are not prepared by a licensed architect. Verify dimensions on site before building."
+    "note": "Schematic plans are for planning and discussion. They are not construction documents and are not prepared by a licensed architect. Verify dimensions on site before building."
   },
   "steps": [
     {
@@ -109,11 +109,11 @@
     },
     {
       "title": "Receive",
-      "text": "Your tour link and drafted floor plan arrive by email, ready for the listing."
+      "text": "Your tour link and your Zillow, marketing or schematic plan arrive by email."
     }
   ],
-  "workIntro": "Recent tours and floor plans.",
-  "about": "Every floor plan is drafted by a Drexel-trained architectural designer, not generated automatically from the scan.",
+  "workIntro": "Recent tours, marketing plans and schematic plans.",
+  "about": "Every marketing plan and schematic plan is drafted by a Drexel-trained architectural designer, not generated automatically from the scan.",
   "area": "Serving Philadelphia and nearby.",
   "email": "evanthalheimer@gmail.com",
   "phone": "215-431-0955"
