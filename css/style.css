@@ -356,6 +356,7 @@ nav a:hover { color: var(--text); }
    ============================================================ */
 .tabbar { display: none; }
 .rail { display: none; }
+.show-more { display: none; }
 
 @media (max-width: 820px) {
   /* Tighter rhythm, and a smaller drawing, so less of the page is padding. */
@@ -365,6 +366,36 @@ nav a:hover { color: var(--text); }
   .hero-art { max-width: 220px; }
   .section-head { margin-bottom: 24px; }
   .steps { gap: 20px; }
+
+  /* Less to read: phones get the headline facts, desktop keeps the rest.
+     Everything hidden here is either said again nearby or is optional
+     detail; none of it is a price or a term. */
+  .lede-more, .hero-art, .section-head-stack p { display: none; }
+  .hero { padding: 32px 0 36px; }
+  .hero h1 { margin-bottom: 14px; }
+  .lede { margin-bottom: 24px; }
+  /* Hosting is in the card's estimate line once the estimator runs. */
+  .tier:has(.tier-estimate:not([hidden])) .tier-hosting { display: none; }
+  .pricing-note { font-size: 12.5px; line-height: 1.5; }
+  .compare-both { font-size: 15px; font-weight: 500; margin-top: 16px; }
+
+  /* Tour cards: three points, then "Show more". */
+  .compare-card ul.is-trimmed:not(.is-open) li:nth-child(n + 4) { display: none; }
+  .show-more {
+    display: inline-block; margin-top: 12px; padding: 0; border: 0; background: none;
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer;
+  }
+
+  /* How it works: number beside the step, not above it. */
+  .steps li { display: grid; grid-template-columns: 32px 1fr; column-gap: 14px; }
+  .step-num { grid-row: span 2; width: 32px; height: 32px; margin: 0; font-size: 14px; }
+  .steps h3 { font-size: 17px; margin-bottom: 2px; }
+  .steps p { font-size: 14.5px; line-height: 1.5; }
+
+  .contact h2 { margin-bottom: 10px; }
+  .contact p { font-size: 15px; }
+  .contact-lines a { font-size: 18px; }
+  .contact { gap: 20px; }
 
   /* Denser cards: the copy is the same, it just takes less room. */
   .compare-card, .plans-card, .tier { padding: 22px; }

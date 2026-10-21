@@ -102,7 +102,7 @@ const tiers = (site.tiers || [])
         <p class="tier-price">${price}</p>
         <ul class="tier-terms">
           ${detail ? `<li>${esc(detail)}</li>` : ""}
-          ${host ? `<li>${esc(host)}</li>` : ""}
+          ${host ? `<li${hosting ? ' class="tier-hosting"' : ""}>${esc(host)}</li>` : ""}
         </ul>
         <p class="tier-estimate" hidden>${hosting ? "First invoice" : "Invoice"} <strong data-estimate></strong>${hosting ? ` <span class="tier-after">+ ${money(hosting)}/mo after first month</span>` : ""}</p>
         <a class="tier-book" href="book.html?package=${encodeURIComponent(t.name || "")}">Book ${esc(t.name)}</a>
@@ -377,6 +377,13 @@ const rail = `<nav class="rail" aria-label="Sections">
     <a href="book.html" class="rail-book" aria-label="Book">${icon("book")}<span class="rail-label">Book</span></a>
   </nav>`;
 
+// The hero intro's first sentence, then the rest in a span phones hide.
+const ledeHtml = (() => {
+  const intro = String(site.intro || "");
+  const cut = intro.search(/[.!?]\s/);
+  return cut < 0 ? esc(intro) : `${esc(intro.slice(0, cut + 1))}<span class="lede-more"> ${esc(intro.slice(cut + 2))}</span>`;
+})();
+
 /* ---------- shared frame ----------
    On the home page the nav jumps within the page; elsewhere it links back to
    the home page's sections. */
@@ -444,7 +451,7 @@ const home = page({
         <div class="hero-text">
           ${site.eyebrow ? `<p class="eyebrow">${esc(site.eyebrow)}</p>` : ""}
           <h1>${esc(site.tagline)}</h1>
-          <p class="lede">${esc(site.intro)}</p>
+          <p class="lede">${ledeHtml}</p>
           <p class="hero-actions"><a class="button" href="book.html">${bookLabel}</a> <a class="text-link" href="#builder" data-builder-link hidden>Help me choose</a></p>
         </div>
         <div class="hero-art">${planSvg}</div>

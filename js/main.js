@@ -411,3 +411,23 @@ if (rail && "IntersectionObserver" in window) {
       if (e.isIntersecting) buttons.forEach((a) => a.classList.remove("is-active")), (current = null);
     }, { threshold: 0.35 }).observe(hero);
 }
+
+// ---------- phone: shorter comparison lists ----------
+// On phones each tour card shows its first three points, with a button for
+// the rest. CSS does the hiding (and ignores it on desktop); this only adds
+// the button and opens the list.
+document.querySelectorAll(".compare-card ul").forEach((list) => {
+  const extra = list.children.length - 3;
+  if (extra < 1) return;
+  const more = Object.assign(document.createElement("button"), {
+    type: "button",
+    className: "show-more",
+    textContent: `Show ${extra} more`,
+  });
+  more.addEventListener("click", () => {
+    list.classList.add("is-open");
+    more.remove();
+  });
+  list.classList.add("is-trimmed");
+  list.after(more);
+});
