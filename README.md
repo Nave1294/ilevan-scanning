@@ -39,7 +39,7 @@ in `site.json` means activating again. After sending, visitors land on
 
 The pricing-card estimator, the booking form's estimate and the "Build your
 job" section all quote from one JSON block the build writes into each page
-(`id="pricing"`), through `quote()` in `js/main.js`. Prices are edited only in
+(`id="pricing-data"`), through `quote()` in `js/main.js`. Prices are edited only in
 `content/site.json` (or the dashboard). The job builder's questions and its
 package recommendations are fixed in `build.mjs` and `js/main.js`, since the
 logic depends on them; its prices are not.

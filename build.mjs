@@ -221,7 +221,7 @@ const compareSection = compareOptions
           <h2 id="compare-heading">${esc(compare.heading || "Which tour?")}</h2>
           ${compare.intro ? `<p>${esc(compare.intro)}</p>` : ""}
         </div>
-        <div class="compare">
+        <div class="compare" data-tabs>
           ${compareOptions}
         </div>
         ${compare.both ? `<p class="compare-both">${esc(compare.both)}</p>` : ""}
@@ -261,7 +261,7 @@ const plansSection = plans.name
           <h2 id="plans-heading">${esc(plans.heading || PLANS_PACKAGE)}</h2>
           ${plans.intro ? `<p>${esc(plans.intro)}</p>` : ""}
         </div>
-        <div class="plans">
+        <div class="plans" data-tabs>
           ${plansCard(plans, { tag: "Included", featured: true })}
           ${(plans.addons || []).map((a) => plansCard(a, { tag: "Add-on", addon: true })).join("\n          ")}
         </div>
@@ -291,7 +291,7 @@ const pricing = {
       }
     : null,
 };
-const pricingScript = `<script type="application/json" id="pricing">${JSON.stringify(pricing).replace(/</g, "\\u003c")}</script>`;
+const pricingScript = `<script type="application/json" id="pricing-data">${JSON.stringify(pricing).replace(/</g, "\\u003c")}</script>`;
 
 const choice = (name, value, label, extra = "") =>
   `<label class="chip"><input type="radio" name="${name}" value="${value}"${extra}><span>${label}</span></label>`;
@@ -349,6 +349,32 @@ const builderSection = `<section class="section" id="builder" aria-labelledby="b
       </div>
     </section>`;
 
+// Line icons for the phone index, drawn on a 24px grid in currentColor.
+const ICONS = {
+  pricing: '<path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
+  compare: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
+  plans: '<rect x="3" y="3" width="18" height="18"/><path d="M3 12h6M14 12h7M12 3v5M12 15v6"/>',
+  builder: '<path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M20 18h0"/><circle cx="16" cy="6" r="2.2"/><circle cx="10" cy="12" r="2.2"/><circle cx="17.5" cy="18" r="2.2"/>',
+  work: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/>',
+  book: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+};
+const icon = (k) =>
+  `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
+
+// Only sections that exist get a button. Phones only; desktop keeps the
+// header links.
+const railItems = [
+  ["pricing", "Pricing", true],
+  ["compare", "Tours", !!compareSection],
+  ["plans", "Schematic plans", !!plansSection],
+  ["builder", "Build your job", true],
+  ["work", "Work", hasWork],
+].filter(([, , on]) => on);
+const rail = `<nav class="rail" aria-label="Sections">
+    ${railItems.map(([id, label]) => `<a href="#${id}" data-rail="${id}" aria-label="${label}"${id === "builder" ? " data-builder-link hidden" : ""}>${icon(id)}<span class="rail-label">${label}</span></a>`).join("\n    ")}
+    <a href="book.html" class="rail-book" aria-label="Book">${icon("book")}<span class="rail-label">Book</span></a>
+  </nav>`;
+
 /* ---------- shared frame ----------
    On the home page the nav jumps within the page; elsewhere it links back to
    the home page's sections. */
@@ -385,7 +411,7 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
   <header class="site-header">
     <div class="wrap header-inner">
       <a class="brand" href="${home ? "#top" : "index.html"}"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
-      <nav aria-label="Main">
+      <nav aria-label="Main"${home ? ' class="nav-home"' : ""}>
         <a href="${at}#pricing">Pricing</a>
         ${plansSection ? `<a href="${at}#plans">Schematic plans</a>` : ""}
         ${hasWork ? `<a href="${at}#work">Work</a>` : ""}
@@ -394,9 +420,10 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
     </div>
   </header>
 
-  <main id="top">
+  <main id="top"${home ? ' class="has-rail"' : ""}>
 ${body}
   </main>
+  ${home ? rail : ""}
 
   <footer class="site-footer">
     <div class="wrap">© ${new Date().getFullYear()} ${name}</div>
@@ -432,7 +459,7 @@ const home = page({
             <span>sq ft</span>
           </label>
         </div>
-        <ul class="tiers">
+        <ul class="tiers" data-tabs data-tabs-default="featured">
       ${tiers}
         </ul>
         ${site.pricingNote ? `<p class="pricing-note">${esc(site.pricingNote)}</p>` : ""}

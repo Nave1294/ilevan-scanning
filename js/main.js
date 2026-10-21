@@ -23,7 +23,7 @@ document.querySelectorAll("[data-open]").forEach((card) => {
 // (pricing cards, booking form, job builder) quote through quote() below.
 const pricing = (() => {
   try {
-    return JSON.parse(document.getElementById("pricing").textContent);
+    return JSON.parse(document.getElementById("pricing-data").textContent);
   } catch {
     return { tiers: [], plans: null };
   }
@@ -225,4 +225,89 @@ if (builder) {
   form.addEventListener("input", update);
   form.addEventListener("change", update);
   form.addEventListener("submit", (e) => e.preventDefault());
+}
+
+// ---------- phone tabs ----------
+// On phones, a group of cards (tiers, tour comparison, schematic plan
+// options) shows one card at a time under a row of tabs, instead of a long
+// stack. The tabs are built here and hidden by CSS on wider screens, where
+// every card shows; without JavaScript the cards simply stack.
+document.querySelectorAll("[data-tabs]").forEach((group, g) => {
+  const panels = [...group.children];
+  if (panels.length < 2) return;
+  const bar = document.createElement("div");
+  bar.className = "tabbar";
+  bar.setAttribute("role", "tablist");
+  // A card's first heading word is short enough for a tab: "Pro",
+  // "Zillow", "Elevations".
+  const tabs = panels.map((panel, i) => {
+    const id = `tabs-${g}-${i}`;
+    panel.id ||= id;
+    panel.setAttribute("role", "tabpanel");
+    const tab = document.createElement("button");
+    tab.type = "button";
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-controls", panel.id);
+    tab.textContent = (panel.querySelector("h3")?.textContent || `${i + 1}`).trim().split(/\s+/)[0];
+    bar.append(tab);
+    return tab;
+  });
+  const select = (i) =>
+    panels.forEach((panel, j) => {
+      panel.classList.toggle("is-tab-active", i === j);
+      tabs[j].setAttribute("aria-selected", String(i === j));
+      tabs[j].tabIndex = i === j ? 0 : -1;
+    });
+  tabs.forEach((tab, i) => tab.addEventListener("click", () => select(i)));
+  bar.addEventListener("keydown", (e) => {
+    const i = tabs.indexOf(document.activeElement);
+    const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
+    if (i < 0 || !step) return;
+    const next = (i + step + tabs.length) % tabs.length;
+    select(next);
+    tabs[next].focus();
+  });
+  const featured = group.dataset.tabsDefault === "featured" ? panels.findIndex((p) => /-featured\b/.test(p.className)) : -1;
+  select(Math.max(0, featured));
+  group.classList.add("has-tabs");
+  group.before(bar);
+});
+
+// ---------- phone index ----------
+// Lights up the button for the section in the middle of the screen, and
+// shows its name for a moment when it changes.
+const rail = document.querySelector(".rail");
+if (rail && "IntersectionObserver" in window) {
+  const buttons = new Map([...rail.querySelectorAll("[data-rail]")].map((a) => [a.dataset.rail, a]));
+  let timer;
+  const activate = (id) => {
+    buttons.forEach((a, key) => a.classList.toggle("is-active", key === id));
+    const a = buttons.get(id);
+    if (!a) return;
+    rail.querySelectorAll(".show-label").forEach((x) => x.classList.remove("show-label"));
+    a.classList.add("show-label");
+    clearTimeout(timer);
+    timer = setTimeout(() => a.classList.remove("show-label"), 1400);
+  };
+  let current = null;
+  const seen = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting && e.target.id !== current) activate((current = e.target.id));
+      });
+    },
+    { rootMargin: "-45% 0px -50% 0px" }
+  );
+  buttons.forEach((_, id) => {
+    const section = document.getElementById(id);
+    if (section) seen.observe(section);
+  });
+  // Above the first indexed section, nothing is lit and the rail stays out
+  // of the way of the hero.
+  const hero = document.querySelector(".hero");
+  if (hero)
+    new IntersectionObserver(([e]) => {
+      rail.classList.toggle("is-up", e.isIntersecting);
+      if (e.isIntersecting) buttons.forEach((a) => a.classList.remove("is-active")), (current = null);
+    }, { threshold: 0.35 }).observe(hero);
 }
