@@ -43,3 +43,12 @@ job" section all quote from one JSON block the build writes into each page
 `content/site.json` (or the dashboard). The job builder's questions and its
 package recommendations are fixed in `build.mjs` and `js/main.js`, since the
 logic depends on them; its prices are not.
+
+## Phones
+
+At 820px and narrower the home page has its own layout. The pricing,
+tour comparison and schematic plan sections are replaced by one "Packages"
+list (`.m-only`, built in `build.mjs`), where each package is a row that
+opens to its details. The rows draw on the same content as desktop: prices,
+each tier's "One-line summary (phones)", and the comparison points whose
+package label matches the tier's name. Desktop never shows any of it.

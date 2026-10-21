@@ -85,24 +85,34 @@ const sqft = (n) => n.toLocaleString("en-US") + " sq ft";
 
 // Prices are stored as numbers, not prose, so the card text and the
 // estimator are worked out from the same figures and can never disagree.
+// A tier's price in words: the headline price, its condition, and hosting.
+const tierTerms = (t) => {
+  const flat = num(t.flat), upTo = num(t.flatUpTo), over = num(t.overRate);
+  const rate = num(t.rate), min = num(t.min), hosting = num(t.hosting);
+  return {
+    hosting,
+    amount: flat ? money(flat) : money(rate),
+    unit: flat ? "flat" : "/sq ft",
+    // The least a job can cost, for "from $159" on phones.
+    from: flat ? money(flat) : money(min || rate),
+    detail: flat
+      ? [upTo ? `Up to ${sqft(upTo)}` : "", over ? `then ${money(over)}/sq ft` : ""].filter(Boolean).join(", ")
+      : min ? `${money(min)} minimum` : "",
+    host: hosting ? `+ ${money(hosting)}/mo hosting` : t.hostingNote || "",
+  };
+};
+
 const tiers = (site.tiers || [])
   .map((t) => {
-    const flat = num(t.flat), upTo = num(t.flatUpTo), over = num(t.overRate);
-    const rate = num(t.rate), min = num(t.min), hosting = num(t.hosting);
-    const price = flat
-      ? `<span class="tier-amount">${money(flat)}</span><span class="tier-unit">flat</span>`
-      : `<span class="tier-amount">${money(rate)}</span><span class="tier-unit">/sq ft</span>`;
-    const detail = flat
-      ? [upTo ? `Up to ${sqft(upTo)}` : "", over ? `then ${money(over)}/sq ft` : ""].filter(Boolean).join(", ")
-      : min ? `${money(min)} minimum` : "";
-    const host = hosting ? `+ ${money(hosting)}/mo hosting` : t.hostingNote || "";
+    const { hosting, amount, unit, detail, host } = tierTerms(t);
+    const price = `<span class="tier-amount">${amount}</span><span class="tier-unit">${unit}</span>`;
     return `<li class="tier${t.featured ? " tier-featured" : ""}">
         <h3>${esc(t.name)}</h3>
         <p class="tier-includes">${esc(t.includes)}</p>
         <p class="tier-price">${price}</p>
         <ul class="tier-terms">
           ${detail ? `<li>${esc(detail)}</li>` : ""}
-          ${host ? `<li${hosting ? ' class="tier-hosting"' : ""}>${esc(host)}</li>` : ""}
+          ${host ? `<li>${esc(host)}</li>` : ""}
         </ul>
         <p class="tier-estimate" hidden>${hosting ? "First invoice" : "Invoice"} <strong data-estimate></strong>${hosting ? ` <span class="tier-after">+ ${money(hosting)}/mo after first month</span>` : ""}</p>
         <a class="tier-book" href="book.html?package=${encodeURIComponent(t.name || "")}">Book ${esc(t.name)}</a>
@@ -221,7 +231,7 @@ const compareSection = compareOptions
           <h2 id="compare-heading">${esc(compare.heading || "Which tour?")}</h2>
           ${compare.intro ? `<p>${esc(compare.intro)}</p>` : ""}
         </div>
-        <div class="compare" data-tabs>
+        <div class="compare">
           ${compareOptions}
         </div>
         ${compare.both ? `<p class="compare-both">${esc(compare.both)}</p>` : ""}
@@ -261,7 +271,7 @@ const plansSection = plans.name
           <h2 id="plans-heading">${esc(plans.heading || PLANS_PACKAGE)}</h2>
           ${plans.intro ? `<p>${esc(plans.intro)}</p>` : ""}
         </div>
-        <div class="plans" data-tabs>
+        <div class="plans">
           ${plansCard(plans, { tag: "Included", featured: true })}
           ${(plans.addons || []).map((a) => plansCard(a, { tag: "Add-on", addon: true })).join("\n          ")}
         </div>
@@ -351,38 +361,92 @@ const builderSection = `<section class="section section-alt" id="builder" aria-l
       </div>
     </section>`;
 
-// Line icons for the phone index, drawn on a 24px grid in currentColor.
-const ICONS = {
-  pricing: '<path d="M3 12V4h8l9 9-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
-  compare: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
-  plans: '<rect x="3" y="3" width="18" height="18"/><path d="M3 12h6M14 12h7M12 3v5M12 15v6"/>',
-  builder: '<path d="M4 6h9M19 6h1M4 12h3M13 12h7M4 18h11M20 18h0"/><circle cx="16" cy="6" r="2.2"/><circle cx="10" cy="12" r="2.2"/><circle cx="17.5" cy="18" r="2.2"/>',
-  work: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/>',
-  book: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
-};
-const icon = (k) =>
-  `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>`;
-
-// Only sections that exist get a button. Phones only; desktop keeps the
-// header links.
-const railItems = [
-  ["builder", "Build your job", true],
-  ["pricing", "Pricing", true],
-  ["compare", "Tours", !!compareSection],
-  ["plans", "Schematic plans", !!plansSection],
-  ["work", "Work", hasWork],
-].filter(([, , on]) => on);
-const rail = `<nav class="rail" aria-label="Sections">
-    ${railItems.map(([id, label]) => `<a href="#${id}" data-rail="${id}" aria-label="${label}"${id === "builder" ? " data-builder-link hidden" : ""}>${icon(id)}<span class="rail-label">${label}</span></a>`).join("\n    ")}
-    <a href="book.html" class="rail-book" aria-label="Book">${icon("book")}<span class="rail-label">Book</span></a>
-  </nav>`;
-
 // The hero intro's first sentence, then the rest in a span phones hide.
 const ledeHtml = (() => {
   const intro = String(site.intro || "");
   const cut = intro.search(/[.!?]\s/);
   return cut < 0 ? esc(intro) : `${esc(intro.slice(0, cut + 1))}<span class="lede-more"> ${esc(intro.slice(cut + 2))}</span>`;
 })();
+
+// Phones get every package as one short list of rows that open up, in place
+// of the pricing, comparison and schematic plan sections, which desktop
+// keeps. Native <details>, so it works without JavaScript; sharing a name
+// makes it an accordion where supported.
+const chevron = `<svg class="svc-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
+const svcRow = ({ name, line, from, body }) => `<details class="svc" name="packages">
+          <summary>
+            <span class="svc-text"><span class="svc-name">${esc(name)}</span><span class="svc-line">${esc(line)}</span></span>
+            <span class="svc-price"><span class="svc-from">from</span>${esc(from)}</span>
+            ${chevron}
+          </summary>
+          <div class="svc-body">
+            ${body}
+          </div>
+        </details>`;
+const svcPoints = (items) => (items.length ? `<ul class="svc-points">${items.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>` : "");
+const svcBook = (pkg, label = `Book ${pkg}`) => `<a class="button svc-book" href="book.html?package=${encodeURIComponent(pkg)}">${esc(label)}</a>`;
+
+const tierRows = (site.tiers || []).map((t) => {
+  const terms = tierTerms(t);
+  // Basic and Pro explain themselves with their comparison points; Complete,
+  // which is both, lists what it includes and says why.
+  const compared = (compare.options || []).find((o) => o.tag === t.name);
+  const both = !compared && (t.deliverables || []).length > 2;
+  return svcRow({
+    name: t.name,
+    line: t.short || (t.deliverables || []).join(" + "),
+    from: terms.from,
+    body: `<p class="svc-terms"><strong>${terms.amount}${terms.unit === "flat" ? " flat" : terms.unit}</strong>${
+              [terms.detail, terms.host.replace(/^\+ /, "")].filter(Boolean).length
+                ? `<span>${esc([terms.detail, terms.host.replace(/^\+ /, "")].filter(Boolean).join(" · "))}</span>`
+                : ""
+            }</p>
+            ${both && compare.both ? `<p class="svc-desc">${esc(compare.both)}</p>` : ""}
+            ${svcPoints(compared ? compared.points || [] : t.deliverables || [])}
+            ${svcBook(t.name)}`,
+  });
+});
+
+const plansRow = plans.name
+  ? (() => {
+      const base = priceLabel(plans);
+      const addonRows = [
+        ...(plans.addons || []).map((a) => {
+          const pr = priceLabel(a, "+");
+          const under = [a.per === "changes" ? "of changes" : "", num(a.min) ? `${money(num(a.min))} minimum` : ""].filter(Boolean).join(" · ");
+          return [a.name, `${pr.main}${pr.unit === "Quoted" ? "" : "/sq ft"}`, under];
+        }),
+        ...(tourHosting ? [["Branded Realsee tour", `${money(tourHosting)}/mo`, "hosting"]] : []),
+      ];
+      return svcRow({
+        name: PLANS_PACKAGE,
+        line: plans.short || plans.name,
+        from: money(num(plans.min) || num(plans.flat) || num(plans.rate)),
+        body: `<p class="svc-terms"><strong>${base.main}${base.unit}</strong>${base.terms ? `<span>${esc(base.terms)}</span>` : ""}</p>
+            <p class="svc-desc">${esc(plans.includes)}</p>
+            ${addonRows.length ? `<p class="svc-sub">Add-ons</p>
+            <ul class="svc-addons">${addonRows
+              .map(([n, pr, under]) => `<li><span>${esc(n)}</span><span class="svc-addon-price">${esc(pr)}${under ? `<small>${esc(under)}</small>` : ""}</span></li>`)
+              .join("")}</ul>` : ""}
+            ${plans.note ? `<p class="fine">${esc(plans.note)}</p>` : ""}
+            ${svcBook(PLANS_PACKAGE, "Book schematic plans")}`,
+      });
+    })()
+  : "";
+
+// Placed after the schematic plans section, not beside the builder where
+// phones show it: on desktop even a hidden section in between changes which
+// section borders apply. On phones the three sections before it are hidden,
+// so it follows the builder anyway.
+const packagesSection = `<section class="section m-only" id="packages" aria-labelledby="packages-heading">
+      <div class="wrap">
+        <h2 id="packages-heading" class="m-heading">Packages</h2>
+        <div class="svc-list">
+        ${[...tierRows, plansRow].filter(Boolean).join("\n        ")}
+        </div>
+        ${site.pricingNote ? `<p class="fine">${esc(site.pricingNote)}</p>` : ""}
+      </div>
+    </section>`;
 
 /* ---------- shared frame ----------
    On the home page the nav jumps within the page; elsewhere it links back to
@@ -420,19 +484,18 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
   <header class="site-header">
     <div class="wrap header-inner">
       <a class="brand" href="${home ? "#top" : "index.html"}"><span class="brand-mark" aria-hidden="true"></span>${name}</a>
-      <nav aria-label="Main"${home ? ' class="nav-home"' : ""}>
+      <nav aria-label="Main">
         <a href="${at}#pricing">Pricing</a>
         ${plansSection ? `<a href="${at}#plans">Schematic plans</a>` : ""}
         ${hasWork ? `<a href="${at}#work">Work</a>` : ""}
-        <a href="book.html">Book</a>
+        <a href="book.html"${path === "book.html" ? ' aria-current="page"' : ""}>Book</a>
       </nav>
     </div>
   </header>
 
-  <main id="top"${home ? ' class="has-rail"' : ""}>
+  <main id="top">
 ${body}
   </main>
-  ${home ? rail : ""}
 
   <footer class="site-footer">
     <div class="wrap">© ${new Date().getFullYear()} ${name}</div>
@@ -470,7 +533,7 @@ const home = page({
             <span>sq ft</span>
           </label>
         </div>
-        <ul class="tiers" data-tabs data-tabs-default="featured">
+        <ul class="tiers">
       ${tiers}
         </ul>
         ${site.pricingNote ? `<p class="pricing-note">${esc(site.pricingNote)}</p>` : ""}
@@ -480,6 +543,8 @@ const home = page({
     ${compareSection}
 
     ${plansSection}
+
+    ${packagesSection}
 
     <section class="section section-alt" aria-labelledby="process-heading">
       <div class="wrap">
@@ -515,7 +580,7 @@ const home = page({
    address an activation link instead; nothing is delivered until it's clicked.
    Fields starting with _ are FormSubmit settings, not questions. */
 const tierOptions = (site.tiers || [])
-  .map((t) => `<option value="${esc(t.name)}">${esc(t.name)}: ${esc(t.includes)}</option>`)
+  .map((t) => `<option value="${esc(t.name)}">${esc(t.name)}: ${esc(t.short || t.includes)}</option>`)
   .join("\n                ");
 
 const field = (id, label, input, hint = "") =>
@@ -556,7 +621,7 @@ const book = page({
             ${field("package", `What do you need? ${req}`, `<select id="package" name="Package" required data-book-package>
                 <option value="">Choose a package</option>
                 ${tierOptions}
-                ${plans.name ? `<option value="${PLANS_PACKAGE}">${PLANS_PACKAGE}: ${esc(plans.includes)}</option>` : ""}
+                ${plans.name ? `<option value="${PLANS_PACKAGE}">${PLANS_PACKAGE}: ${esc(plans.short || plans.includes)}</option>` : ""}
                 <option value="Not sure">Not sure yet</option>
               </select>`, `Not sure? <a href="index.html#builder">Build your job</a> and we'll suggest one.`)}
             ${(plans.addons || []).length || tourHosting ? `<div class="field addons" hidden data-addons>

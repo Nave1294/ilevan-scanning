@@ -307,12 +307,6 @@ nav a:hover { color: var(--text); }
 .check { display: flex; align-items: center; gap: 10px; font-weight: 400; cursor: pointer; }
 .booking .check input { width: 18px; height: 18px; padding: 0; accent-color: var(--accent); }
 
-/* "Schematic plans" doesn't fit beside three other links on the narrowest
-   phones. Pricing goes, since it's the first section below the hero anyway. */
-@media (max-width: 400px) {
-  .site-header nav a[href$="#pricing"] { display: none; }
-}
-
 /* ---------- hero second action ---------- */
 .hero-actions { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
 .hero-actions .text-link[hidden] { display: none; }
@@ -350,109 +344,6 @@ nav a:hover { color: var(--text); }
   .builder-result { position: static; }
 }
 
-/* ============================================================
-   PHONES: tabs and the side index
-   Desktop is unchanged; everything below applies at 820px and narrower.
-   ============================================================ */
-.tabbar { display: none; }
-.rail { display: none; }
-.show-more { display: none; }
-
-@media (max-width: 820px) {
-  /* Tighter rhythm, and a smaller drawing, so less of the page is padding. */
-  .section { padding: 44px 0; }
-  .hero { padding: 36px 0 40px; }
-  .hero-inner { gap: 24px; }
-  .hero-art { max-width: 220px; }
-  .section-head { margin-bottom: 24px; }
-  .steps { gap: 20px; }
-
-  /* Less to read: phones get the headline facts, desktop keeps the rest.
-     Everything hidden here is either said again nearby or is optional
-     detail; none of it is a price or a term. */
-  .lede-more, .hero-art, .section-head-stack p { display: none; }
-  .hero { padding: 32px 0 36px; }
-  .hero h1 { margin-bottom: 14px; }
-  .lede { margin-bottom: 24px; }
-  /* Hosting is in the card's estimate line once the estimator runs. */
-  .tier:has(.tier-estimate:not([hidden])) .tier-hosting { display: none; }
-  .pricing-note { font-size: 12.5px; line-height: 1.5; }
-  .compare-both { font-size: 15px; font-weight: 500; margin-top: 16px; }
-
-  /* Tour cards: three points, then "Show more". */
-  .compare-card ul.is-trimmed:not(.is-open) li:nth-child(n + 4) { display: none; }
-  .show-more {
-    display: inline-block; margin-top: 12px; padding: 0; border: 0; background: none;
-    font: inherit; font-size: 14px; font-weight: 600; color: var(--accent); cursor: pointer;
-  }
-
-  /* How it works: number beside the step, not above it. */
-  .steps li { display: grid; grid-template-columns: 32px 1fr; column-gap: 14px; }
-  .step-num { grid-row: span 2; width: 32px; height: 32px; margin: 0; font-size: 14px; }
-  .steps h3 { font-size: 17px; margin-bottom: 2px; }
-  .steps p { font-size: 14.5px; line-height: 1.5; }
-
-  .contact h2 { margin-bottom: 10px; }
-  .contact p { font-size: 15px; }
-  .contact-lines a { font-size: 18px; }
-  .contact { gap: 20px; }
-
-  /* Denser cards: the copy is the same, it just takes less room. */
-  .compare-card, .plans-card, .tier { padding: 22px; }
-  .compare-card ul { gap: 8px; }
-  .compare-card li, .plans-text, .section-head-stack p { font-size: 15px; line-height: 1.5; }
-  .compare-card h3 { margin-bottom: 12px; }
-
-  /* Tabs: one card at a time. */
-  .tabbar {
-    display: flex; gap: 4px; padding: 4px; margin-bottom: 16px;
-    background: var(--bg-alt); border-radius: 999px;
-  }
-  .tabbar button {
-    flex: 1 1 0; min-width: 0; padding: 9px 8px;
-    border: 0; border-radius: 999px; background: transparent;
-    font: inherit; font-size: 14px; font-weight: 600; color: var(--muted);
-    cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .tabbar button[aria-selected="true"] { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); }
-  .tabbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-  .has-tabs > :not(.is-tab-active) { display: none; }
-
-  /* The index replaces the header links on the home page. */
-  .nav-home a:not([href="book.html"]) { display: none; }
-  /* Room for the index, beside every section but the hero (where it hides). */
-  .has-rail .section .wrap { padding-right: 60px; }
-
-  .rail {
-    position: fixed; z-index: 20; right: 10px; top: 50%; transform: translateY(-50%);
-    display: flex; flex-direction: column; gap: 10px;
-    transition: opacity 0.25s, transform 0.25s;
-  }
-  .rail.is-up { opacity: 0; transform: translate(12px, -50%); pointer-events: none; }
-  .rail a {
-    position: relative; display: grid; place-items: center;
-    width: 40px; height: 40px; border-radius: 50%;
-    background: rgba(255, 255, 255, 0.94); color: var(--text);
-    border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    text-decoration: none; transition: background 0.15s, color 0.15s, border-color 0.15s;
-  }
-  .rail a[hidden] { display: none; }
-  .rail a.is-active { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .rail .rail-book { background: var(--text); border-color: var(--text); color: var(--bg); }
-  /* The section's name, shown beside its button for a moment. */
-  .rail-label {
-    position: absolute; right: 48px; top: 50%; transform: translateY(-50%);
-    padding: 5px 10px; border-radius: 999px; white-space: nowrap;
-    background: var(--text); color: var(--bg); font-size: 13px; font-weight: 600;
-    opacity: 0; pointer-events: none; transition: opacity 0.2s;
-  }
-  .rail a.show-label .rail-label, .rail a:focus-visible .rail-label { opacity: 1; }
-  .rail a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-}
-@media (max-width: 820px) and (prefers-reduced-motion: reduce) {
-  .rail, .rail a, .rail-label { transition: none; }
-}
-
 /* ---------- booking form: job summary ---------- */
 .job-summary { grid-column: 1 / -1; border: 1px solid var(--accent); box-shadow: inset 0 0 0 1px var(--accent); border-radius: var(--radius); padding: 18px 20px; }
 .job-summary[hidden] { display: none; }
@@ -470,3 +361,128 @@ nav a:hover { color: var(--text); }
 .breakdown-total th, .breakdown-total td { border-bottom: 0; padding-top: 12px; font-weight: 700; font-size: 17px; }
 .builder-estimate { font-weight: 400; color: var(--muted); font-size: 14px; }
 .builder-estimate[hidden] { display: none; }
+
+/* ============================================================
+   PHONES
+   A layout of its own at 820px and narrower: one column, fewer and larger
+   things to tap, and every package in one list that opens up. Sections
+   alternate white and grey instead of being ruled off. Desktop never sees
+   any of this; .m-only content exists only here.
+   ============================================================ */
+.m-only { display: none; }
+
+@media (max-width: 820px) {
+  :root { --gutter: 20px; }
+  .m-only { display: block; }
+  /* The package list stands in for these three. */
+  #pricing, #compare, #plans { display: none; }
+
+  .section { padding: 40px 0; border-top: 0; }
+  #work + #contact { border-top: 1px solid var(--border); }
+  .section-head { margin-bottom: 18px; }
+  .section-head-stack p { display: none; }
+  .section-head h2, .m-heading, .contact h2 { font-size: 26px; }
+  .m-heading { margin-bottom: 16px; }
+  .fine { font-size: 12.5px; line-height: 1.5; color: var(--muted); margin: 14px 0 0; }
+
+  /* Header: the name and one button. */
+  .header-inner { height: 60px; }
+  .site-header nav a:not([href="book.html"]) { display: none; }
+  /* Both at least 44px tall, a comfortable thumb target. */
+  .brand { padding: 9px 0; }
+  .site-header nav a[href="book.html"] {
+    display: inline-flex; align-items: center; min-height: 44px; padding: 0 20px; border-radius: 999px;
+    background: var(--text); color: var(--bg); font-size: 14px; font-weight: 600;
+  }
+  /* Not on the booking page itself. After the rule above, which would
+     otherwise win. */
+  .site-header nav a[aria-current="page"] { display: none; }
+
+  /* Hero: headline, one sentence, two buttons. */
+  .hero { padding: 36px 0 40px; }
+  .hero-inner { display: block; }
+  .hero-art, .lede-more { display: none; }
+  .eyebrow { font-size: 12px; margin-bottom: 14px; }
+  .hero h1 { font-size: 36px; line-height: 1.08; margin-bottom: 14px; max-width: none; }
+  .lede { font-size: 17px; margin-bottom: 28px; }
+  .hero-actions { display: grid; gap: 12px; margin: 0; }
+  .hero-actions .button, .hero-actions .text-link {
+    display: block; text-align: center; padding: 15px 22px; font-size: 16px; border-radius: 999px;
+  }
+  .hero-actions .text-link { border: 1.5px solid var(--text); color: var(--text); text-decoration: none; }
+  .hero-actions .text-link[hidden] { display: none; }
+
+  /* Build your job. */
+  .builder { display: block; }
+  .builder .section-head { margin-bottom: 16px; }
+  .builder-form { gap: 24px; }
+  .q legend { font-size: 16px; margin-bottom: 10px; }
+  .chip span { padding: 11px 16px; }
+  .chip { -webkit-tap-highlight-color: transparent; user-select: none; }
+  .q input[type="number"] { width: 100%; }
+  .builder-result { position: static; margin-top: 24px; padding: 22px; border-radius: 14px; background: var(--bg); }
+  .builder-result h3 { font-size: 24px; }
+  .builder-result .button { display: block; text-align: center; }
+
+  /* Packages: a row each, opening to its details. */
+  .svc-list { display: grid; gap: 10px; }
+  .svc { border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
+  .svc[open] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+  .svc summary {
+    display: grid; grid-template-columns: 1fr auto 20px; align-items: center; gap: 12px;
+    padding: 16px 16px 16px 18px; cursor: pointer; list-style: none;
+  }
+  .svc summary::-webkit-details-marker { display: none; }
+  .svc summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 14px; }
+  .svc-name { display: block; font-size: 17px; font-weight: 700; }
+  .svc-line { display: block; margin-top: 1px; font-size: 14px; color: var(--muted); }
+  .svc-price { text-align: right; font-size: 17px; font-weight: 700; line-height: 1.15; white-space: nowrap; }
+  .svc-from { display: block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .svc-chevron { color: var(--muted); transition: transform 0.2s; }
+  .svc[open] .svc-chevron { transform: rotate(180deg); color: var(--accent); }
+  .svc-body { margin: 0 18px; padding: 16px 0 20px; border-top: 1px solid var(--border); }
+  .svc-terms { margin-bottom: 12px; font-size: 17px; }
+  .svc-terms span { display: block; margin-top: 2px; font-size: 14px; color: var(--muted); }
+  .svc-desc { margin-bottom: 12px; font-size: 15px; color: var(--muted); }
+  .svc-points { list-style: none; margin: 0 0 18px; padding: 0; display: grid; gap: 8px; }
+  .svc-points li { position: relative; padding-left: 18px; font-size: 14.5px; line-height: 1.5; color: var(--muted); }
+  .svc-points li::before { content: ""; position: absolute; left: 0; top: 0.6em; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+  .svc-sub { margin: 4px 0 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+  .svc-addons { list-style: none; margin: 0 0 14px; padding: 0; }
+  .svc-addons li { display: flex; justify-content: space-between; gap: 12px; padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 14.5px; }
+  .svc-addon-price { flex: none; text-align: right; font-weight: 600; white-space: nowrap; }
+  .svc-addon-price small { display: block; font-size: 12.5px; font-weight: 400; color: var(--muted); }
+  .svc-body .fine { margin: 0 0 16px; }
+  .svc-book { display: block; text-align: center; }
+
+  /* How it works: number beside each step. */
+  .steps { gap: 18px; }
+  .steps li { display: grid; grid-template-columns: 32px 1fr; column-gap: 14px; }
+  .step-num { grid-row: span 2; width: 32px; height: 32px; margin: 0; font-size: 14px; }
+  .steps h3 { font-size: 17px; margin-bottom: 2px; }
+  .steps p { font-size: 14.5px; line-height: 1.5; }
+
+  /* Contact: buttons, not underlined text. */
+  .contact { display: block; }
+  .contact h2 { margin-bottom: 10px; }
+  .contact p { font-size: 15px; }
+  .contact .button { display: block; margin-top: 8px; text-align: center; }
+  .contact-lines { display: grid; gap: 10px; justify-items: stretch; margin-top: 20px; }
+  .contact-lines a { padding: 13px 16px; border: 1px solid var(--border); border-radius: 12px; text-align: center; font-size: 16px; }
+  .contact-lines a:hover { border-color: var(--text); }
+
+  /* Booking page. */
+  .form-section { padding-top: 32px; }
+  .form-intro h1, .thanks h1 { font-size: 34px; margin-bottom: 10px; }
+  .form-intro .lede { font-size: 16px; margin-bottom: 0; }
+  /* On the booking page, a quiet line of links rather than big buttons,
+     so the form starts higher. */
+  .contact-lines-small { display: flex; flex-wrap: wrap; gap: 4px 18px; margin-top: 12px; }
+  .contact-lines-small a { padding: 8px 0; border: 0; border-radius: 0; font-size: 15px; font-weight: 600; color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .booking fieldset { margin-bottom: 28px; }
+  .booking button[type="submit"] { width: 100%; padding: 15px; font-size: 16px; }
+  .thanks .button { display: block; text-align: center; }
+}
+@media (max-width: 820px) and (prefers-reduced-motion: reduce) {
+  .svc-chevron { transition: none; }
+}

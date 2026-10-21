@@ -103,6 +103,7 @@ content:
         fields:
           - { name: name, label: Tier name, type: string }
           - { name: includes, label: What's included, type: text }
+          - { name: short, label: One-line summary (phones), type: string, description: 'Shown in the phone layout\'s package list, e.g. "Branded tour + marketing plan". Keep it short.' }
           - { name: flat, label: Flat price ($), type: number, description: "e.g. 89. Leave 0 for per-square-foot tiers." }
           - { name: flatUpTo, label: Flat price covers up to (sq ft), type: number, description: "e.g. 2000" }
           - { name: overRate, label: Extra per sq ft above that ($), type: number, description: "e.g. 0.03" }
@@ -139,6 +140,7 @@ content:
           - { name: intro, label: Intro, type: text }
           - { name: name, label: Base drawing set, type: string, description: 'e.g. "Existing conditions". Clear it to hide the whole section.' }
           - { name: includes, label: What's included, type: text }
+          - { name: short, label: One-line summary (phones), type: string }
           - { name: flat, label: Flat price ($), type: number }
           - { name: rate, label: Per sq ft ($), type: number }
           - { name: min, label: Minimum ($), type: number }

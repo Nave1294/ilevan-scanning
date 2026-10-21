@@ -20,7 +20,8 @@
       "deliverables": [
         "Zillow 3D tour",
         "Zillow plan"
-      ]
+      ],
+      "short": "Zillow 3D tour + Zillow plan"
     },
     {
       "name": "Pro",
@@ -36,7 +37,8 @@
       "deliverables": [
         "Branded Realsee tour",
         "Marketing plan"
-      ]
+      ],
+      "short": "Branded tour + marketing plan"
     },
     {
       "name": "Complete",
@@ -54,7 +56,8 @@
         "Zillow plan",
         "Branded Realsee tour",
         "Marketing plan"
-      ]
+      ],
+      "short": "Both tours + both plans"
     }
   ],
   "pricingNote": "The first invoice includes the first month of hosting. Zillow plans and marketing plans are approximate and for marketing purposes only.",
@@ -115,7 +118,8 @@
       }
     ],
     "note": "Schematic plans are for planning and discussion. They are not construction documents and are not prepared by a licensed architect. Verify dimensions on site before building.",
-    "tourHosting": 10
+    "tourHosting": 10,
+    "short": "Measured plans for renovations"
   },
   "steps": [
     {
