@@ -621,7 +621,8 @@ const book = page({
           </div>
         </div>
 
-        <form class="booking" action="https://formsubmit.co/${esc(email)}" method="POST" data-booking>
+        <form class="booking" action="https://formsubmit.co/${esc(email)}" method="POST" data-booking
+          data-ajax="https://formsubmit.co/ajax/${esc(email)}" data-mailto="${esc(email)}">
           <input type="hidden" name="_subject" value="New scan booking">
           <input type="hidden" name="_template" value="table">
           <input type="hidden" name="_captcha" value="false">
@@ -687,7 +688,11 @@ const book = page({
             ${field("notes", "Anything else", `<textarea id="notes" name="Notes" rows="4"></textarea>`)}
           </fieldset>
 
-          <p><button class="button" type="submit">Send booking request</button></p>
+          <p><button class="button" type="submit" data-book-send>Send booking request</button></p>
+          <div class="send-error" role="alert" hidden data-book-error>
+            <p><strong>That didn't go through.</strong> The form service had a problem, so nothing was sent. Your answers are still here. Email them instead, or try again in a minute.</p>
+            <p class="send-error-actions"><a class="button" href="#" data-book-mailto>Email this booking</a> <button class="text-link" type="submit">Try again</button></p>
+          </div>
           <p class="hint">This sends your details to ${name} by email. We'll reply to confirm; nothing is booked until we do.</p>
         </form>
       </div>

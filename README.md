@@ -31,7 +31,11 @@ shown full width and never cropped; only the card thumbnail is.
 in `content/site.json`. GitHub Pages can't send mail on its own.
 
 The first submission sends that address an activation email instead of the
-booking; nothing arrives until the link in it is clicked. Changing the email
+booking; nothing arrives until the link in it is clicked. The form sends in the
+background (FormSubmit's `/ajax/` endpoint). If that fails for any reason, the
+visitor stays on the page with their answers and gets an "Email this
+booking" button that opens a pre-filled email instead. Without JavaScript the
+form posts the ordinary way. Changing the email
 in `site.json` means activating again. After sending, visitors land on
 `thanks.html`.
 

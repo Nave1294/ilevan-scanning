@@ -226,6 +226,43 @@ if (booking) {
   // One last pass on submit, so the email can never carry a stale summary.
   booking.addEventListener("submit", update);
   update();
+
+  // Send in the background rather than leaving the page, so a failure at
+  // the form service doesn't strand the visitor on its error page with
+  // their booking lost. On failure, the same answers can go by email
+  // instead. Without JavaScript the form still posts the ordinary way.
+  const send = booking.querySelector("[data-book-send]");
+  const failed = booking.querySelector("[data-book-error]");
+  const mailto = booking.querySelector("[data-book-mailto]");
+  if (booking.dataset.ajax && window.fetch) {
+    booking.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      failed.hidden = true;
+      send.disabled = true;
+      send.textContent = "Sending…";
+      const data = new FormData(booking);
+      let ok = false;
+      try {
+        const res = await fetch(booking.dataset.ajax, { method: "POST", body: data, headers: { Accept: "application/json" } });
+        const body = await res.json().catch(() => ({}));
+        ok = res.ok && String(body.success) === "true";
+      } catch {
+        ok = false;
+      }
+      if (ok) {
+        location.href = booking.querySelector("[data-next]").value || "thanks.html";
+        return;
+      }
+      // Everything the visitor filled in, as a ready-to-send email. Fields
+      // starting with _ are the form service's settings, not answers.
+      const lines = [...data.entries()].filter(([k, v]) => !k.startsWith("_") && String(v).trim()).map(([k, v]) => `${k}: ${v}`);
+      mailto.href = `mailto:${booking.dataset.mailto}?subject=${encodeURIComponent(subject.value)}&body=${encodeURIComponent(lines.join("\n"))}`;
+      failed.hidden = false;
+      send.disabled = false;
+      send.textContent = "Send booking request";
+      failed.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }
 }
 
 // ---------- job builder ----------
