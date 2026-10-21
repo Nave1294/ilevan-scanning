@@ -71,6 +71,25 @@ const describe = (q, prefix = "Estimated ") => {
   return `${label.charAt(0).toUpperCase() + label.slice(1)}: ${money(first)}${quoted}${monthly}${waiting}`;
 };
 
+// The deliverables for a job, as a list: the package's own, or for
+// schematic plans the base plan plus whatever was added.
+const deliverables = ({ pkg, addons = [], changes = 0, tour = false }) => {
+  if (isPlans(pkg)) {
+    const p = pricing.plans;
+    const perChanges = new Set(p.addons.filter((a) => a.per === "changes").map((a) => a.name));
+    return [
+      p.base,
+      ...p.addons.filter((a) => addons.includes(a.name)).map((a) =>
+        perChanges.has(a.name) && changes ? `${a.name} (${changes.toLocaleString("en-US")} sq ft of proposed changes)` : a.name
+      ),
+      ...(tour ? [`Branded Realsee tour (${money(p.tourHosting)}/mo hosting)`] : []),
+    ];
+  }
+  const t = pricing.tiers.find((x) => x.name === pkg);
+  if (!t) return [];
+  return [...t.deliverables, ...(t.hosting ? [`Hosting (${money(t.hosting)}/mo)`] : [])];
+};
+
 // ---------- pricing cards ----------
 // Hidden without JavaScript, where the cards' own terms give the full price.
 const sqftInput = document.querySelector("[data-sqft]");
@@ -99,7 +118,14 @@ if (booking) {
 
   const pkg = booking.querySelector("[data-book-package]");
   const size = booking.querySelector("[data-book-sqft]");
+  const kind = booking.querySelector("[data-book-kind]");
+  const summary = booking.querySelector("[data-book-summary]");
+  const list = booking.querySelector("[data-book-list]");
   const line = booking.querySelector("[data-book-estimate]");
+  // Hidden fields, so the email carries the summary the visitor saw.
+  const sentDeliverables = booking.querySelector("[data-book-deliverables]");
+  const sentEstimate = booking.querySelector("[data-book-estimate-field]");
+  const subject = booking.querySelector('input[name="_subject"]');
   const addonsBox = booking.querySelector("[data-addons]");
   const addons = [...booking.querySelectorAll("[data-addon]")];
   const tour = booking.querySelector("[data-tour]");
@@ -117,6 +143,8 @@ if (booking) {
   addons.forEach((a) => (a.checked = wantedAddons.includes(a.dataset.name)));
   if (tour) tour.checked = params.get("tour") === "1";
   if (changes && Number(params.get("changes")) > 0) changes.value = Number(params.get("changes"));
+  const kinds = { home: "Home", commercial: "Commercial or mixed-use" };
+  if (kind && kinds[params.get("kind")]) kind.value = kinds[params.get("kind")];
 
   const update = () => {
     const plans = isPlans(pkg.value);
@@ -135,20 +163,34 @@ if (booking) {
     }
 
     const sqft = Number(size.value) || 0;
-    const q = sqft > 0 ? quote({
+    const job = {
       pkg: pkg.value,
       sqft,
       addons: addons.filter((a) => a.checked).map((a) => a.dataset.name),
       changes: changes && !changes.disabled ? Number(changes.value) || 0 : 0,
       tour: !!tour?.checked,
-    }) : null;
+    };
+    const items = deliverables(job);
+    const q = sqft > 0 ? quote(job) : null;
+
+    summary.hidden = !items.length;
+    list.replaceChildren(...items.map((text) => Object.assign(document.createElement("li"), { textContent: text })));
     line.hidden = !q;
     if (q) line.textContent = describe(q);
+
+    sentDeliverables.value = items.join("; ") || (pkg.value === "Not sure" ? "Not sure yet" : "");
+    sentEstimate.value = q ? describe(q, "") : "";
+    // "New booking: Pro, 1,500 sq ft" reads at a glance in the inbox.
+    subject.value = ["New booking", [pkg.value, sqft ? `${sqft.toLocaleString("en-US")} sq ft` : ""].filter(Boolean).join(", ")]
+      .filter(Boolean)
+      .join(": ");
   };
   extras.forEach((x) => x.addEventListener("change", update));
   pkg.addEventListener("change", update);
   size.addEventListener("input", update);
   changes?.addEventListener("input", update);
+  // One last pass on submit, so the email can never carry a stale summary.
+  booking.addEventListener("submit", update);
   update();
 }
 
@@ -218,6 +260,7 @@ if (builder) {
     if (rec.addons?.length) link.set("addons", rec.addons.join("|"));
     if (rec.tour) link.set("tour", "1");
     if (needsChanges) link.set("changes", String(changes));
+    if (purpose === "listing" && val("kind")) link.set("kind", val("kind"));
     const book = result.querySelector("[data-builder-book]");
     book.href = `book.html?${link}`;
     book.textContent = `Book ${rec.pkg}`;

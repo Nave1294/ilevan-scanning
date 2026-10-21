@@ -280,10 +280,12 @@ const pricing = {
   tiers: (site.tiers || []).map((t) => ({
     name: String(t.name || ""), flat: num(t.flat), upTo: num(t.flatUpTo), over: num(t.overRate),
     rate: num(t.rate), min: num(t.min), hosting: num(t.hosting),
+    deliverables: (t.deliverables || []).map(String),
   })),
   plans: plans.name
     ? {
         name: PLANS_PACKAGE, flat: num(plans.flat), rate: num(plans.rate), min: num(plans.min), tourHosting,
+        base: `Schematic plan: ${String(plans.name).toLowerCase()}`,
         addons: (plans.addons || []).map((a) => ({
           name: String(a.name || ""), flat: num(a.flat), rate: num(a.rate), min: num(a.min),
           per: a.per === "changes" ? "changes" : "building",
@@ -525,7 +527,7 @@ const book = page({
       <div class="wrap form-layout">
         <div class="form-intro">
           <h1>${bookLabel}</h1>
-          <p class="lede">Tell us about the property and we'll reply to confirm a time and the price.</p>
+          <p class="lede">Tell us what you need and about the property, and we'll reply to confirm a time and the price.</p>
           <div class="contact-lines contact-lines-small">
             ${contactLines}
           </div>
@@ -538,45 +540,61 @@ const book = page({
           <input type="hidden" name="_next" value="" data-next>
           <input class="honey" type="text" name="_honey" tabindex="-1" autocomplete="off" aria-hidden="true">
 
-          <fieldset>
-            <legend>You</legend>
-            ${field("name", `Name ${req}`, `<input id="name" name="Name" type="text" autocomplete="name" required>`)}
-            ${field("email", `Email ${req}`, `<input id="email" name="email" type="email" autocomplete="email" required>`, "Replies go here.")}
-            ${field("phone", "Phone", `<input id="phone" name="Phone" type="tel" autocomplete="tel">`)}
-            ${field("brokerage", "Brokerage", `<input id="brokerage" name="Brokerage" type="text" autocomplete="organization">`)}
-          </fieldset>
+          <input type="hidden" name="Deliverables" value="" data-book-deliverables>
+          <input type="hidden" name="Estimate" value="" data-book-estimate-field>
 
           <fieldset>
-            <legend>The property</legend>
-            ${field("address", `Address ${req}`, `<input id="address" name="Address" type="text" autocomplete="street-address" required>`)}
-            ${field("sqft", `Square footage ${req}`, `<input id="sqft" name="Square footage" type="number" inputmode="numeric" min="100" step="1" required data-book-sqft>`)}
-            ${field("package", `Package ${req}`, `<select id="package" name="Package" required data-book-package>
+            <legend>Your job</legend>
+            ${field("package", `What do you need? ${req}`, `<select id="package" name="Package" required data-book-package>
                 <option value="">Choose a package</option>
                 ${tierOptions}
                 ${plans.name ? `<option value="${PLANS_PACKAGE}">${PLANS_PACKAGE}: ${esc(plans.includes)}</option>` : ""}
                 <option value="Not sure">Not sure yet</option>
-              </select>`)}
+              </select>`, `Not sure? <a href="index.html#builder">Build your job</a> and we'll suggest one.`)}
             ${(plans.addons || []).length || tourHosting ? `<div class="field addons" hidden data-addons>
-              <span class="addons-label">Add-ons</span>
+              <span class="addons-label">Add to the schematic plan</span>
               ${plans.addons
                 .map(
-                  (a) => `<label class="check"><input type="checkbox" name="Add-on: ${esc(a.name)}" value="Yes" data-addon data-name="${esc(a.name)}"${a.per === "changes" ? " data-per-changes" : ""}> ${esc(a.name)}</label>`
+                  (a) => `<label class="check"><input type="checkbox" data-addon data-name="${esc(a.name)}"${a.per === "changes" ? " data-per-changes" : ""}> ${esc(a.name)}</label>`
                 )
                 .join("\n              ")}
-              ${tourHosting ? `<label class="check"><input type="checkbox" name="Add-on: Branded Realsee tour" value="Yes, ${money(tourHosting)}/mo hosting" data-tour> Branded Realsee tour from the same scan (+${money(tourHosting)}/mo hosting)</label>` : ""}
+              ${tourHosting ? `<label class="check"><input type="checkbox" data-tour> Branded Realsee tour from the same scan (+${money(tourHosting)}/mo hosting)</label>` : ""}
             </div>` : ""}
+            ${field("kind", "Property type", `<select id="kind" name="Property type" data-book-kind>
+                <option value="">Choose one</option>
+                <option value="Home">Home</option>
+                <option value="Commercial or mixed-use">Commercial or mixed-use</option>
+              </select>`)}
+            ${field("sqft", `Square footage of the building ${req}`, `<input id="sqft" name="Square footage" type="number" inputmode="numeric" min="100" step="1" required data-book-sqft>`)}
             <div class="field" hidden data-changes-field>
               <label for="changes">Square footage of proposed changes ${req}</label>
               <input id="changes" name="Proposed changes (sq ft)" type="number" inputmode="numeric" min="1" step="1" data-book-changes disabled>
               <p class="hint">The area you're reworking or adding.</p>
             </div>
-            <p class="estimate-line" hidden data-book-estimate></p>
+            <div class="job-summary" hidden data-book-summary>
+              <span class="compare-tag">You're booking</span>
+              <ul data-book-list></ul>
+              <p class="estimate-line" data-book-estimate></p>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>The property</legend>
+            ${field("address", `Address ${req}`, `<input id="address" name="Address" type="text" autocomplete="street-address" required>`)}
+            ${field("access", "Access", `<input id="access" name="Access" type="text" placeholder="Lockbox, occupied, pets…">`)}
+          </fieldset>
+
+          <fieldset>
+            <legend>You</legend>
+            ${field("name", `Name ${req}`, `<input id="name" name="Name" type="text" autocomplete="name" required>`)}
+            ${field("email", `Email ${req}`, `<input id="email" name="email" type="email" autocomplete="email" required>`, "Replies go here.")}
+            ${field("phone", "Phone", `<input id="phone" name="Phone" type="tel" autocomplete="tel">`)}
+            ${field("brokerage", "Brokerage or company", `<input id="brokerage" name="Brokerage or company" type="text" autocomplete="organization">`)}
           </fieldset>
 
           <fieldset>
             <legend>Scheduling</legend>
             ${field("dates", "Preferred dates or times", `<input id="dates" name="Preferred dates" type="text" placeholder="e.g. Tue or Wed morning">`)}
-            ${field("access", "Access", `<input id="access" name="Access" type="text" placeholder="Lockbox, occupied, pets…">`)}
             ${field("notes", "Anything else", `<textarea id="notes" name="Notes" rows="4"></textarea>`)}
           </fieldset>
 

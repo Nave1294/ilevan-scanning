@@ -110,6 +110,7 @@ content:
           - { name: min, label: Minimum ($), type: number, description: "e.g. 159" }
           - { name: hosting, label: Hosting per month ($), type: number, description: "Added to the first invoice. 0 if hosting is free." }
           - { name: hostingNote, label: Hosting note, type: string, description: 'Shown when hosting is 0, e.g. "Hosting free on Zillow".' }
+          - { name: deliverables, label: Deliverables, type: string, list: true, description: 'Listed in the booking form and the booking email, e.g. "Zillow 3D tour", "Zillow plan".' }
           - { name: featured, label: Highlight this tier, type: boolean }
       - { name: pricingNote, label: Note under pricing, type: text }
       - name: compare

@@ -16,7 +16,11 @@
       "min": 0,
       "hosting": 0,
       "hostingNote": "Hosting free on Zillow",
-      "featured": false
+      "featured": false,
+      "deliverables": [
+        "Zillow 3D tour",
+        "Zillow plan"
+      ]
     },
     {
       "name": "Pro",
@@ -28,7 +32,11 @@
       "min": 159,
       "hosting": 10,
       "hostingNote": "",
-      "featured": true
+      "featured": true,
+      "deliverables": [
+        "Branded Realsee tour",
+        "Marketing plan"
+      ]
     },
     {
       "name": "Complete",
@@ -40,7 +48,13 @@
       "min": 199,
       "hosting": 10,
       "hostingNote": "",
-      "featured": false
+      "featured": false,
+      "deliverables": [
+        "Zillow 3D tour",
+        "Zillow plan",
+        "Branded Realsee tour",
+        "Marketing plan"
+      ]
     }
   ],
   "pricingNote": "The first invoice includes the first month of hosting. Zillow plans and marketing plans are approximate and for marketing purposes only.",
