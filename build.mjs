@@ -95,7 +95,8 @@ const PLAN_ITEMS = {
   sofa: '<rect x="70" y="300" width="120" height="26" rx="6"/><path d="M76 312 H184"/><rect x="62" y="296" width="12" height="32" rx="4"/><rect x="186" y="296" width="12" height="32" rx="4"/>',
   speaker: '<rect x="34" y="214" width="20" height="28" rx="3"/><circle cx="44" cy="233" r="5"/><circle cx="44" cy="221" r="2"/>',
   bed: '<rect x="36" y="36" width="84" height="110" rx="4"/><rect x="44" y="44" width="30" height="16" rx="3"/><rect x="82" y="44" width="30" height="16" rx="3"/><path d="M36 72 H120"/>',
-  tub: '<rect x="214" y="40" width="40" height="92" rx="14"/><circle cx="234" cy="120" r="3"/>',
+  // Along the bathroom's bottom wall, clear of the way to the bedroom door.
+  tub: '<rect x="250" y="150" width="70" height="40" rx="14"/><circle cx="262" cy="170" r="3"/>',
 };
 const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focusable="false" data-plan data-rooms='${JSON.stringify(PLAN_ROOMS)}' data-doors='${JSON.stringify(PLAN_DOORS)}'>
   <defs>
@@ -559,7 +560,7 @@ ${body}
   </main>
 
   ${home ? `<section class="mascot" aria-hidden="true">
-    ${loaderSvg}
+    <div class="wrap">${loaderSvg}</div>
   </section>` : ""}
 
   <footer class="site-footer">

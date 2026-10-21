@@ -488,8 +488,8 @@ const character = (svg, { roam } = {}) => {
         await eyeClose();
       },
     },
-    // With a ball in the yard: down to it, a couple of kicks and a chase, a
-    // hop over it, a kick back, a little celebration, and home.
+    // With a ball in the yard: down to it, a kick and a chase, a hop over
+    // it, a kick back, a little celebration, and home.
     kickball: {
       when: () => !!ball,
       run: async () => {
@@ -500,13 +500,11 @@ const character = (svg, { roam } = {}) => {
         await leap(OUTSIDE[perch], GROUND, { rise: 120, ms: 820, across: "early" });
         // Standing just short of the ball, on the side away from `dir`.
         const behind = (dir) => (dir > 0 ? ball.x - BALL_R - 310 - 6 : ball.x + BALL_R + 6);
-        for (let k = 0; k < 2; k++) {
-          await lookTo(side * REACH, 10, 250);
-          await moveTo(behind(side), 230);
-          await sleep(rand(200, 500));
-          await kick(side);
-          await sleep(200);
-        }
+        await lookTo(side * REACH, 10, 250);
+        await moveTo(behind(side), 230);
+        await sleep(rand(200, 500));
+        await kick(side);
+        await sleep(200);
         await moveTo(behind(side), 230);
         await lookTo(side * REACH, -REACH, 300);
         await hopOver(side);
@@ -561,9 +559,12 @@ const character = (svg, { roam } = {}) => {
   };
   let lastAdventure = "";
   const adventure = () => {
-    // With room to roam, the ground adventures come up twice as often.
-    const pool = [...Object.keys(ADVENTURES), ...(roam ? ["groundRun", "crossing", "kickball"] : [])];
-    const names = pool.filter((n) => n !== lastAdventure && ADVENTURES[n].when());
+    // Never the same twice running, and never two trips along the ground in
+    // a row: side to side gets broken up by something else.
+    const ground = ["groundRun", "crossing", "kickball"];
+    const names = Object.keys(ADVENTURES).filter(
+      (n) => n !== lastAdventure && ADVENTURES[n].when() && !(ground.includes(n) && ground.includes(lastAdventure))
+    );
     if (!names.length) return jump();
     lastAdventure = names[Math.floor(Math.random() * names.length)];
     svg.dataset.adventure = lastAdventure;
@@ -697,9 +698,8 @@ const character = (svg, { roam } = {}) => {
       if (!running) return;
       await sleep(rand(300, 1400));
       if (!running) return;
-      // Usually the plain leap; often something more adventurous instead,
-      // more often still when there's room to roam.
-      await (Math.random() < (roam ? 0.6 : 0.45) ? adventure() : jump());
+      // Usually the plain leap; often something more adventurous instead.
+      await (Math.random() < 0.45 ? adventure() : jump());
     }
   };
 
@@ -1022,11 +1022,14 @@ if (builder) {
 // The plan starts empty. The eye comes in through the front opening and goes
 // room to room, only ever through doorways. In each room it glances along
 // dotted lines of sight to the corners and walls, and the room's walls build
-// in, spreading out from the eye. Then it moves in: furnishes the place,
-// measures two walls, watches TV, makes dinner, eats it, dances, and goes to
-// bed, where it stays asleep. Once through, about two minutes, never
-// repeated. Desktop only: phones don't show the drawing. With reduced motion
-// (or without JavaScript) the plan is shown finished, furnished, eye asleep.
+// in, spreading out from the eye. Then it moves in: furnishes the place and
+// measures two walls, and welcomes its family in at the front opening: a
+// partner and two kids. Together they watch TV, cook (the kids play chase
+// meanwhile), eat dinner round the table and have a dance party; then the
+// kids fall asleep on the sofa and the parents go to bed, where everything
+// stays still. Once through, a little under three minutes, never repeated.
+// Desktop only: phones don't show the drawing. With reduced motion (or
+// without JavaScript) the plan is shown finished, furnished, eye asleep.
 const plan = document.querySelector("[data-plan]");
 if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const NS = "http://www.w3.org/2000/svg";
@@ -1047,8 +1050,6 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const rays = plan.querySelector(".plan-rays");
   const marks = plan.querySelector(".plan-marks");
   const fx = plan.querySelector(".plan-fx");
-  const eye = plan.querySelector(".plan-eye");
-  const pupil = plan.querySelector(".plan-eye-pupil");
   const reveals = [...plan.querySelectorAll(".plan-reveal")];
   const item = (name) => plan.querySelector(`[data-item="${name}"]`);
 
@@ -1065,6 +1066,7 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       requestAnimationFrame(frame);
     });
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const all = (...jobs) => Promise.all(jobs);
   const shape = (tag, attrs, parent = fx, text = "") => {
     const el = document.createElementNS(NS, tag);
     Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
@@ -1073,23 +1075,10 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     return el;
   };
 
-  // The eye: where it is, how squinted, and a bob layered on top for
-  // dancing and nodding along.
-  let ex = 315, ey = -24, squint = 1, bobX = 0, bobY = 0;
-  const place = () => eye.setAttribute("transform", `translate(${(ex + bobX).toFixed(2)} ${(ey + bobY).toFixed(2)}) scale(1 ${squint.toFixed(3)})`);
-  // The pupil leans towards what it's looking at, never past the eye's rim.
-  const lookAt = (x, y) => {
-    const dx = x - ex, dy = y - ey, d = Math.hypot(dx, dy) || 1, k = Math.min(5.2, d) / d;
-    pupil.setAttribute("cx", (dx * k).toFixed(2));
-    pupil.setAttribute("cy", (dy * k).toFixed(2));
-  };
-  const lookAhead = () => { pupil.setAttribute("cx", 0); pupil.setAttribute("cy", 0); };
-
-  // Which room a point is in, and the doors from one room to another.
-  let here = -1; // outside
+  // Which room a point is in, and the doorways from one room to another.
   const roomAt = (x, y) => rooms.findIndex((r) => x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h);
   const route = (from, to) => {
-    if (from === to || from < 0) return [];
+    if (from === to || from < 0 || to < 0) return [];
     const prev = { [from]: null }, queue = [from];
     while (queue.length) {
       const r = queue.shift();
@@ -1104,165 +1093,278 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     return points;
   };
 
-  // Gliding in a straight line, looking where it's going.
-  const glide = async (x, y) => {
-    const fx0 = ex, fy0 = ey;
-    lookAt(x, y);
-    await tween(Math.max(300, Math.hypot(x - fx0, y - fy0) * 8), (t) => {
-      ex = fx0 + (x - fx0) * t;
-      ey = fy0 + (y - fy0) * t;
-      place();
-    });
-  };
-  // Walking anywhere: through each doorway on the way, never a wall.
-  const walkTo = async (x, y) => {
-    const to = roomAt(x, y);
-    for (const [dx, dy] of route(here, to)) await glide(dx, dy);
-    await glide(x, y);
-    here = to;
-    lookAhead();
-  };
+  // Someone in the house: an eye with a pupil, at a place, of a size. The
+  // logo's eye is already drawn; the family are added as they arrive.
+  const FRONT = [315, 20]; // the opening in the bathroom's top wall
+  class Eye {
+    constructor({ el = null, r = 10, colour = "var(--text)", x = FRONT[0], y = -26 } = {}) {
+      if (!el) {
+        el = shape("g", { class: "plan-eye" }, plan);
+        plan.insertBefore(el, plan.querySelector(".plan-eye"));
+        shape("circle", { class: "plan-eye-ball", r, style: `fill: ${colour}` }, el);
+        shape("circle", { class: "plan-eye-pupil", r: (r * 0.36).toFixed(2) }, el);
+      }
+      this.el = el;
+      this.pupil = el.querySelector(".plan-eye-pupil");
+      this.r = r;
+      Object.assign(this, { x, y, squint: 1, bobX: 0, bobY: 0, here: -1 });
+      this.place();
+    }
+    place() {
+      this.el.setAttribute("transform", `translate(${(this.x + this.bobX).toFixed(2)} ${(this.y + this.bobY).toFixed(2)}) scale(1 ${this.squint.toFixed(3)})`);
+    }
+    // The pupil leans towards what it's looking at, never past the rim.
+    lookAt(x, y) {
+      const dx = x - this.x, dy = y - this.y, d = Math.hypot(dx, dy) || 1, k = Math.min(this.r * 0.52, d) / d;
+      this.pupil.setAttribute("cx", (dx * k).toFixed(2));
+      this.pupil.setAttribute("cy", (dy * k).toFixed(2));
+    }
+    lookAhead() { this.pupil.setAttribute("cx", 0); this.pupil.setAttribute("cy", 0); }
+    // In a straight line, looking where it's going. Kids are quicker.
+    async glide(x, y, pace = this.r < 10 ? 6 : 8) {
+      const x0 = this.x, y0 = this.y;
+      this.lookAt(x, y);
+      await tween(Math.max(300, Math.hypot(x - x0, y - y0) * pace), (t) => {
+        this.x = x0 + (x - x0) * t;
+        this.y = y0 + (y - y0) * t;
+        this.place();
+      });
+    }
+    // Anywhere in the house: through each doorway on the way, never a wall.
+    async walkTo(x, y) {
+      const to = roomAt(x, y);
+      for (const [dx, dy] of route(this.here, to)) await this.glide(dx, dy);
+      await this.glide(x, y);
+      this.here = to;
+      this.lookAhead();
+    }
+    blink(ms = 320) { return tween(ms, (t) => { this.squint = 1 - 0.85 * Math.sin(Math.PI * t); this.place(); }, linear); }
+    // A happy hop on the spot.
+    hop(height = 8, ms = 380) { return tween(ms, (t) => { this.bobY = -height * Math.sin(Math.PI * t); this.place(); }, linear); }
+    // Eyes closing for sleep, and staying closed.
+    doze(ms = 1400) { return tween(ms, (t) => { this.squint = 1 - 0.85 * t; this.place(); }); }
+  }
+
+  const me = new Eye({ el: plan.querySelector(".plan-eye"), x: FRONT[0], y: -24 });
+  me.lookAt(315, 60);
 
   const scan = async (room, i) => {
     for (const [x, y] of room.sights) {
-      const line = shape("line", { class: "plan-ray", x1: ex, y1: ey, x2: ex, y2: ey }, rays);
-      lookAt(x, y);
+      const line = shape("line", { class: "plan-ray", x1: me.x, y1: me.y, x2: me.x, y2: me.y }, rays);
+      me.lookAt(x, y);
       await tween(170, (t) => {
-        line.setAttribute("x2", ex + (x - ex) * t);
-        line.setAttribute("y2", ey + (y - ey) * t);
+        line.setAttribute("x2", me.x + (x - me.x) * t);
+        line.setAttribute("y2", me.y + (y - me.y) * t);
       });
     }
-    lookAhead();
+    me.lookAhead();
     await tween(900, (t) => reveals[i].setAttribute("r", (room.reach * t).toFixed(1)));
     await tween(350, (t) => (rays.style.opacity = 1 - t));
     rays.replaceChildren();
     rays.style.opacity = 1;
   };
 
-  const blink = (ms = 320) => tween(ms, (t) => { squint = 1 - 0.85 * Math.sin(Math.PI * t); place(); }, linear);
-  // Setting something down: a little squash as it pops into place.
+  // Setting a piece of furniture down: a little squash as it pops in.
   const setDown = async (name) => {
     const el = item(name), box = el.getBBox(), cx = box.x + box.width / 2, cy = box.y + box.height / 2;
-    lookAt(cx, cy);
-    await tween(160, (t) => { squint = 1 - 0.25 * t; place(); });
+    me.lookAt(cx, cy);
+    await tween(160, (t) => { me.squint = 1 - 0.25 * t; me.place(); });
     el.style.opacity = 1;
     const pop = (t) => 1 + 0.25 * Math.sin(Math.PI * t) * (1 - t);
-    await Promise.all([
+    await all(
       tween(420, (t) => el.setAttribute("transform", `translate(${cx} ${cy}) scale(${(t * pop(t)).toFixed(3)}) translate(${-cx} ${-cy})`), linear),
-      tween(240, (t) => { squint = 0.75 + 0.25 * t; place(); }),
-    ]);
+      tween(240, (t) => { me.squint = 0.75 + 0.25 * t; me.place(); })
+    );
     el.removeAttribute("transform");
-    lookAhead();
+    me.lookAhead();
   };
 
   // A dimension line drawn along a wall as the eye walks it.
   const measure = async ([x1, y1], [x2, y2], label, [lx, ly]) => {
-    await walkTo(x1, y1);
+    await me.walkTo(x1, y1);
     const vertical = x1 === x2;
     const tick = (x, y) => shape("path", { class: "plan-mark", d: vertical ? `M${x - 5} ${y} H${x + 5}` : `M${x} ${y - 5} V${y + 5}` }, marks);
     tick(x1, y1);
     const line = shape("line", { class: "plan-mark", x1, y1, x2: x1, y2: y1 }, marks);
-    lookAt(x2, y2);
-    const fx0 = ex, fy0 = ey;
+    me.lookAt(x2, y2);
+    const x0 = me.x, y0 = me.y;
     await tween(Math.hypot(x2 - x1, y2 - y1) * 11, (t) => {
-      ex = fx0 + (x2 - fx0) * t;
-      ey = fy0 + (y2 - fy0) * t;
+      me.x = x0 + (x2 - x0) * t;
+      me.y = y0 + (y2 - y0) * t;
       line.setAttribute("x2", x1 + (x2 - x1) * t);
       line.setAttribute("y2", y1 + (y2 - y1) * t);
-      place();
+      me.place();
     }, linear);
     tick(x2, y2);
     const text = shape("text", { class: "plan-label", x: lx, y: ly, "text-anchor": "middle", opacity: 0 }, marks, label);
     await tween(300, (t) => text.setAttribute("opacity", t));
-    lookAhead();
+    me.lookAhead();
   };
 
   // Things that float up and fade: music notes, steam, z's.
-  const drift = (el, dy, ms, sway = 0) => {
-    const x0 = +el.getAttribute("x") || 0;
-    return tween(ms, (t, raw) => {
+  const drift = (el, dy, ms, sway = 0) =>
+    tween(ms, (t, raw) => {
       el.setAttribute("transform", `translate(${(sway * Math.sin(raw * Math.PI * 2)).toFixed(2)} ${(-dy * raw).toFixed(2)})`);
       el.setAttribute("opacity", (raw < 0.2 ? raw / 0.2 : 1 - (raw - 0.2) / 0.8).toFixed(2));
     }, linear).then(() => el.remove());
+
+  // ---- The family ----
+  let partner, kidA, kidB, family = [];
+
+  // At the front opening: one by one they come in, each greeted with a hop.
+  const welcome = async () => {
+    await me.walkTo(315, 46);
+    me.lookAt(315, 0);
+    await sleep(500);
+    await me.hop(6);
+    partner = new Eye({ colour: "var(--accent)" });
+    kidA = new Eye({ r: 6.5 });
+    kidB = new Eye({ r: 6.5, colour: "var(--accent)" });
+    family = [partner, kidA, kidB];
+    // Step aside to let them in.
+    await me.glide(272, 70);
+    me.lookAt(315, 20);
+    const spots = [[300, 92], [270, 110], [300, 130]];
+    for (let k = 0; k < family.length; k++) {
+      const f = family[k];
+      f.lookAt(315, 60);
+      await f.glide(FRONT[0], FRONT[1] + 6);
+      f.here = 0;
+      await all(f.glide(...spots[k]), me.hop(6));
+      await all(f.hop(f.r < 10 ? 10 : 6), me.blink());
+      me.lookAt(...spots[k]);
+      await sleep(250);
+    }
+    for (const f of family) f.lookAt(me.x, me.y);
+    await sleep(600);
+    await all(...family.map((f) => f.hop(f.r < 10 ? 9 : 5)));
   };
+
+  // Everyone off somewhere at once, each by their own way through the
+  // doorways, setting off a beat apart.
+  const go = (moves) => all(...moves.map(([who, x, y], k) => sleep(k * 260).then(() => who.walkTo(x, y))));
 
   const watchTV = async () => {
-    await walkTo(130, 306);
+    await go([[me, 112, 306], [partner, 152, 306], [kidA, 112, 272], [kidB, 156, 272]]);
     const screen = item("tv").querySelector(".plan-screen");
-    lookAt(190, 213);
+    const everyone = [me, partner, kidA, kidB];
     const colours = ["#cfe3e5", "#1d5c63", "#e8d9a8", "#9fc3c7", "#f0c9bd"];
-    const flicker = tween(10000, (t, raw) => {
-      screen.style.fill = colours[Math.floor(raw * 28) % colours.length];
-      // Every so often, a glance away and back.
-      raw > 0.45 && raw < 0.52 ? lookAt(60, 330) : lookAt(190, 213);
+    await tween(11000, (t, raw) => {
+      screen.style.fill = colours[Math.floor(raw * 30) % colours.length];
+      everyone.forEach((e) => e.lookAt(190, 213));
+      // The kids can't sit still; halfway through, the parents share a look.
+      kidA.bobY = -2 * Math.abs(Math.sin(raw * Math.PI * 14));
+      kidB.bobX = 1.5 * Math.sin(raw * Math.PI * 10);
+      if (raw > 0.5 && raw < 0.58) { me.lookAt(partner.x, partner.y); partner.lookAt(me.x, me.y); }
+      everyone.forEach((e) => e.place());
     }, linear);
-    await flicker;
     screen.style.fill = "";
-    await blink();
+    kidA.bobY = kidB.bobX = 0;
+    await all(me.blink(), partner.blink());
   };
 
-  const makeDinner = async () => {
-    await walkTo(405, 101);
-    lookAt(437, 100);
-    const stir = tween(8500, (t, raw) => { bobX = 3 * Math.sin(raw * Math.PI * 16); bobY = 2 * Math.cos(raw * Math.PI * 16); place(); }, linear);
-    for (let n = 0; n < 9; n++) {
-      const puff = shape("path", { class: "plan-steam", d: `M${430 + (n % 3) * 6} 96 q 4 -6 0 -12 q -4 -6 0 -12` });
-      drift(puff, 26, 1600, 3);
-      await sleep(850);
-    }
-    await stir;
-    bobX = bobY = 0;
-    place();
-  };
-
-  const eatDinner = async () => {
-    await walkTo(348, 285);
-    const plate = shape("circle", { class: "plan-mark", cx: 376, cy: 285, r: 9 });
-    const food = [[373, 283], [379, 283], [376, 289]].map(([x, y]) => shape("circle", { class: "plan-food", cx: x, cy: y, r: 2.4 }));
-    lookAt(376, 285);
-    await sleep(500);
-    for (const bite of food) {
-      await tween(420, (t) => { bobX = 6 * Math.sin(Math.PI * t); place(); });
-      bite.remove();
-      await sleep(900);
-    }
-    await sleep(500);
-    await tween(300, (t) => plate.setAttribute("opacity", 1 - t));
-    plate.remove();
-    await blink();
-  };
-
-  const dance = async () => {
-    await walkTo(150, 262);
-    const notes = (async () => {
-      for (let n = 0; n < 12; n++) {
-        const note = shape("text", { class: "plan-note", x: 48 + (n % 2) * 8, y: 214 }, fx, n % 3 ? "♪" : "♫");
-        drift(note, 34, 1800, 5);
-        await sleep(700);
+  // The parents cook; the kids chase each other round the living room.
+  const cook = async () => {
+    await go([[me, 405, 101], [partner, 405, 150], [kidA, 80, 262], [kidB, 230, 262]]);
+    me.lookAt(437, 100);
+    partner.lookAt(437, 150);
+    const stir = tween(9000, (t, raw) => {
+      me.bobX = 3 * Math.sin(raw * Math.PI * 16);
+      me.bobY = 2 * Math.cos(raw * Math.PI * 16);
+      partner.bobY = -2 * Math.abs(Math.sin(raw * Math.PI * 9));
+      me.place();
+      partner.place();
+    }, linear);
+    const steam = (async () => {
+      for (let n = 0; n < 10; n++) {
+        drift(shape("path", { class: "plan-steam", d: `M${430 + (n % 3) * 6} 96 q 4 -6 0 -12 q -4 -6 0 -12` }), 26, 1600, 3);
+        await sleep(850);
       }
     })();
-    await tween(9600, (t, raw) => {
-      const beat = raw * Math.PI * 2 * 12;
-      bobY = -Math.abs(9 * Math.sin(beat));
-      bobX = 10 * Math.sin(beat / 2);
-      squint = 1 - 0.12 * Math.abs(Math.cos(beat));
-      pupil.setAttribute("cx", (3.5 * Math.sin(beat / 2)).toFixed(2));
-      place();
+    // Round and round the living room, one just behind the other.
+    const chase = tween(9000, (t, raw) => {
+      const a = raw * Math.PI * 2 * 3;
+      [[kidA, 0], [kidB, 0.9]].forEach(([k, lag]) => {
+        k.x = 155 + 75 * Math.cos(a - lag);
+        k.y = 268 + 22 * Math.sin(a - lag);
+        k.lookAt(155 + 75 * Math.cos(a - lag + 0.4), 268 + 22 * Math.sin(a - lag + 0.4));
+        k.place();
+      });
     }, linear);
-    await notes;
-    bobX = bobY = 0;
-    squint = 1;
-    lookAhead();
-    place();
+    await all(stir, steam, chase);
+    me.bobX = me.bobY = partner.bobY = 0;
+    me.place();
+    partner.place();
   };
 
-  // Last: bed. Its eye closes, a few z's, and there it stays.
-  const goToBed = async () => {
-    await walkTo(78, 100);
+  // Dinner round the table, a plate each, eaten bite by bite.
+  const eat = async () => {
+    const seats = [[me, 350, 285, 376, 285], [partner, 430, 285, 404, 285], [kidA, 390, 238, 390, 268], [kidB, 390, 327, 390, 302]];
+    await go(seats.map(([who, x, y]) => [who, x, y]));
+    const plates = seats.map(([who, , , px, py]) => {
+      const plate = shape("circle", { class: "plan-mark", cx: px, cy: py, r: 7 });
+      const food = [[-2.5, -1.5], [2.5, -1.5], [0, 2.5]].map(([dx, dy]) => shape("circle", { class: "plan-food", cx: px + dx, cy: py + dy, r: 2 }));
+      who.lookAt(px, py);
+      return { who, plate, food, px, py };
+    });
+    await sleep(600);
+    for (let bite = 0; bite < 3; bite++) {
+      await all(...plates.map(({ who, food, px, py }, k) => sleep(k * 220 + Math.random() * 300).then(async () => {
+        const dx = px - who.x, dy = py - who.y, d = Math.hypot(dx, dy);
+        await tween(420, (t) => { const s = 5 * Math.sin(Math.PI * t); who.bobX = (dx / d) * s; who.bobY = (dy / d) * s; who.place(); });
+        food[bite].remove();
+      })));
+      await sleep(700);
+      // Between bites, a glance around the table.
+      plates.forEach(({ who }, k) => { const other = plates[(k + 1 + bite) % plates.length].who; who.lookAt(other.x, other.y); });
+      await sleep(500);
+      plates.forEach(({ who, px, py }) => who.lookAt(px, py));
+    }
+    await sleep(500);
+    await tween(350, (t) => plates.forEach(({ plate }) => plate.setAttribute("opacity", 1 - t)));
+    plates.forEach(({ plate }) => plate.remove());
+    await all(...plates.map(({ who }) => who.blink()));
+  };
+
+  const danceParty = async () => {
+    await go([[me, 120, 262], [partner, 175, 262], [kidA, 95, 290], [kidB, 210, 290]]);
+    const everyone = [me, partner, kidA, kidB];
+    const notes = (async () => {
+      for (let n = 0; n < 16; n++) {
+        drift(shape("text", { class: "plan-note", x: 48 + (n % 2) * 8, y: 214 }, fx, n % 3 ? "♪" : "♫"), 34, 1800, 5);
+        await sleep(650);
+      }
+    })();
+    await tween(11000, (t, raw) => {
+      everyone.forEach((e, k) => {
+        const beat = raw * Math.PI * 2 * 14 + k * 0.8;
+        e.bobY = -Math.abs((e.r < 10 ? 7 : 9) * Math.sin(beat));
+        e.bobX = (e.r < 10 ? 6 : 10) * Math.sin(beat / 2);
+        e.squint = 1 - 0.12 * Math.abs(Math.cos(beat));
+        e.pupil.setAttribute("cx", (e.r * 0.35 * Math.sin(beat / 2)).toFixed(2));
+        e.place();
+      });
+    }, linear);
+    await notes;
+    everyone.forEach((e) => { e.bobX = e.bobY = 0; e.squint = 1; e.lookAhead(); e.place(); });
+  };
+
+  // The kids nod off on the sofa; the parents go to bed. And there they stay.
+  const bedtime = async () => {
+    await go([[kidA, 112, 312], [kidB, 150, 312]]);
+    await all(kidA.doze(1600), kidB.doze(1900));
+    me.lookAt(130, 312);
+    partner.lookAt(130, 312);
+    await sleep(800);
+    await go([[me, 62, 100], [partner, 98, 100]]);
     await sleep(400);
-    await tween(1400, (t) => { squint = 1 - 0.85 * t; place(); });
+    me.lookAt(partner.x, partner.y);
+    partner.lookAt(me.x, me.y);
+    await sleep(700);
+    await all(me.doze(1600), partner.doze(1800));
     for (let n = 0; n < 4; n++) {
-      drift(shape("text", { class: "plan-z", x: 92 + n * 2, y: 92 }, fx, "z"), 30, 2200, 3);
+      drift(shape("text", { class: "plan-z", x: 82 + n * 2, y: 90 }, fx, "z"), 30, 2200, 3);
+      if (n % 2) drift(shape("text", { class: "plan-z", x: 136, y: 300 }, fx, "z"), 22, 1800, 2);
       await sleep(1300);
     }
   };
@@ -1270,19 +1372,17 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const run = async () => {
     plan.querySelectorAll(".plan-item").forEach((el) => (el.style.opacity = 0));
     walls.setAttribute("mask", "url(#plan-built)");
-    place();
-    lookAt(315, 60);
     // In through the front opening, then each room in turn.
     await sleep(400);
-    await glide(315, 22);
+    await me.glide(FRONT[0], FRONT[1] + 2);
     for (let i = 0; i < rooms.length; i++) {
-      await walkTo(rooms[i].cx, rooms[i].cy);
+      await me.walkTo(rooms[i].cx, rooms[i].cy);
       await sleep(200);
       await scan(rooms[i], i);
       await sleep(250);
     }
     await sleep(900);
-    await blink();
+    await me.blink();
     await sleep(700);
 
     // Moving in: furniture, room by room, from the kitchen round to the bath.
@@ -1291,52 +1391,59 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
       ["sofa", 130, 280], ["speaker", 70, 228], ["bed", 150, 90], ["tub", 230, 160],
     ];
     for (const [name, x, y] of furnish) {
-      await walkTo(x, y);
+      await me.walkTo(x, y);
       await setDown(name);
       await sleep(350);
     }
-    // Measuring up.
+    // Measuring up. The second wall right to left, below the speaker, so
+    // the walk there stays clear of it.
     await measure([182, 30], [182, 190], "15′", [168, 114]);
     await sleep(400);
-    // Right to left, below the speaker, so the walk there stays clear of it.
     await measure([290, 266], [30, 266], "23′", [160, 260]);
     await sleep(600);
-    // Settling in.
-    await watchTV();
-    await sleep(500);
-    await makeDinner();
-    await sleep(500);
-    await eatDinner();
-    await sleep(500);
-    await dance();
+
+    // The family arrives, and the house fills up.
+    await welcome();
     await sleep(600);
-    await goToBed();
+    await watchTV();
+    await sleep(600);
+    await cook();
+    await sleep(600);
+    await eat();
+    await sleep(600);
+    await danceParty();
+    await sleep(700);
+    await bedtime();
   };
 
   // Only once the drawing is actually on screen (desktop widths).
   const wide = matchMedia("(min-width: 821px)");
   let started = false;
-  const go = () => { if (!started && wide.matches) { started = true; run(); } };
-  go();
-  wide.addEventListener("change", go);
+  const start = () => { if (!started && wide.matches) { started = true; run(); } };
+  start();
+  wide.addEventListener("change", start);
 }
 
 // ---------- the mascot at the foot of the home page ----------
-// The logo again, in a full-width strip above the footer, with the eye
-// living its life there: moods, leaps, adventures, and runs that can reach
-// most of the way to either edge of the screen. It starts when scrolled
-// into view.
+// The logo again, in a strip above the footer, with the eye living its life
+// there: moods, leaps, adventures, and runs along the ground that stay
+// within the page's text column, so a trip from side to side is short. It
+// starts when scrolled into view.
 const mascot = document.querySelector(".mascot .loader");
 if (mascot && "IntersectionObserver" in window) {
   const VIEW = mascot.viewBox.baseVal;
   // An offset of 0 puts the dot's left edge at x 0 and its right edge at
-  // 310 (it's 310 across). Between these it stays 160 units clear of either
-  // screen edge, room for its squash and float.
+  // 310 (it's 310 across). Between these it stays 160 units inside the
+  // column's edges, room for its squash and float.
   const roam = () => {
     const box = mascot.getBoundingClientRect();
     const perPx = VIEW.width / box.width;
-    const leftEdge = VIEW.x - box.left * perPx;
-    const rightEdge = VIEW.x + (innerWidth - box.left) * perPx;
+    // The text column: the strip's .wrap, inside its side padding.
+    const column = mascot.closest(".wrap");
+    const style = getComputedStyle(column), col = column.getBoundingClientRect();
+    const from = col.left + parseFloat(style.paddingLeft), to = col.right - parseFloat(style.paddingRight);
+    const leftEdge = VIEW.x + (from - box.left) * perPx;
+    const rightEdge = VIEW.x + (to - box.left) * perPx;
     return { left: leftEdge + 160, right: rightEdge - 310 - 160 };
   };
   const life = character(mascot, { roam });

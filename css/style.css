@@ -363,7 +363,8 @@ nav a:hover { color: var(--text); }
    The logo with its eye at play, in a strip the full width of the screen.
    The eye runs off the drawing's edges (overflow visible), and the strip
    clips it at the screen's edges so the page never scrolls sideways. */
-.mascot { overflow: hidden; display: grid; justify-items: center; padding: 48px 0 0; border-top: 1px solid var(--border); }
+.mascot { overflow: hidden; padding: 48px 0 0; border-top: 1px solid var(--border); }
+.mascot .wrap { display: grid; justify-items: center; }
 .mascot .loader { width: clamp(110px, 12vw, 150px); height: auto; overflow: visible; }
 /* The yard's props, in light grey so the logo stays the thing; the ball in
    the accent colour. */
