@@ -233,6 +233,7 @@ if (booking) {
   // instead. Without JavaScript the form still posts the ordinary way.
   const send = booking.querySelector("[data-book-send]");
   const wait = booking.querySelector("[data-book-wait]");
+  const slowNote = booking.querySelector("[data-book-slow]");
   const failed = booking.querySelector("[data-book-error]");
   const mailto = booking.querySelector("[data-book-mailto]");
   if (booking.dataset.ajax && window.fetch) {
@@ -241,11 +242,12 @@ if (booking) {
       failed.hidden = true;
       // Disabled while sending, so an impatient second tap can't book twice.
       send.disabled = true;
-      send.classList.add("is-sending");
       send.textContent = "Sending…";
-      // FormSubmit sends the email before it answers, which can take a
-      // while; say so after a moment rather than look frozen.
-      const slow = setTimeout(() => (wait.hidden = false), 3000);
+      // The bouncing logo shows at once. FormSubmit sends the email before
+      // it answers, which can take a while, so after a moment say so too.
+      wait.hidden = false;
+      slowNote.hidden = true;
+      const slow = setTimeout(() => (slowNote.hidden = false), 3000);
       const data = new FormData(booking);
       let ok = false;
       try {
@@ -267,7 +269,6 @@ if (booking) {
       wait.hidden = true;
       failed.hidden = false;
       send.disabled = false;
-      send.classList.remove("is-sending");
       send.textContent = "Send booking request";
       failed.scrollIntoView({ block: "center", behavior: "smooth" });
     });

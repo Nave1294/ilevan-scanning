@@ -689,7 +689,10 @@ const book = page({
           </fieldset>
 
           <p><button class="button" type="submit" data-book-send>Send booking request</button></p>
-          <p class="send-wait" role="status" hidden data-book-wait>Still sending. The form service can take up to a minute, so please keep this page open.</p>
+          <div class="send-wait" role="status" hidden data-book-wait>
+            <img src="assets/brand/loader.svg" alt="" width="34" height="85">
+            <p><strong>Sending your request…</strong><span hidden data-book-slow> This can take up to a minute, so please keep this page open.</span></p>
+          </div>
           <div class="send-error" role="alert" hidden data-book-error>
             <p><strong>That didn't go through.</strong> The form service had a problem, so nothing was sent. Your answers are still here. Email them instead, or try again in a minute.</p>
             <p class="send-error-actions"><a class="button" href="#" data-book-mailto>Email this booking</a> <button class="text-link" type="submit">Try again</button></p>
