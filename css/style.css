@@ -97,6 +97,15 @@ nav a:hover { color: var(--text); }
 .plan-ray { stroke: var(--accent); stroke-width: 1.4; stroke-dasharray: 1.5 4.5; stroke-linecap: round; }
 .plan-eye-ball { fill: var(--text); }
 .plan-eye-pupil { fill: var(--bg); }
+/* What the eye furnishes the plan with, and the marks of its life there. */
+.plan { overflow: visible; }
+.plan-item, .plan-mark { fill: none; stroke: #9a9a9a; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.plan-item .plan-screen { stroke: none; fill: none; }
+.plan-label { fill: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 0.02em; }
+.plan-note { fill: var(--accent); font-size: 15px; }
+.plan-steam { fill: none; stroke: #9a9a9a; stroke-width: 1.6; stroke-linecap: round; }
+.plan-food { fill: var(--accent); }
+.plan-z { fill: var(--muted); font-size: 11px; font-weight: 700; }
 
 
 /* ---------- sections ---------- */
@@ -356,6 +365,12 @@ nav a:hover { color: var(--text); }
    clips it at the screen's edges so the page never scrolls sideways. */
 .mascot { overflow: hidden; display: grid; justify-items: center; padding: 48px 0 0; border-top: 1px solid var(--border); }
 .mascot .loader { width: clamp(110px, 12vw, 150px); height: auto; overflow: visible; }
+/* The yard's props, in light grey so the logo stays the thing; the ball in
+   the accent colour. */
+.mascot .ilv-prop rect, .mascot .ilv-prop path { fill: #fff; stroke: #c4c4c4; stroke-width: 24; stroke-linejoin: round; stroke-linecap: round; }
+.mascot .ilv-ball { transform-box: fill-box; transform-origin: 50% 50%; }
+.mascot .ilv-ball circle { fill: var(--accent); }
+.mascot .ilv-ball path { fill: none; stroke: #fff; stroke-width: 16; stroke-linecap: round; opacity: 0.7; }
 
 /* ---------- booking form: when sending fails ---------- */
 .send-error { margin-top: 16px; padding: 18px 20px; border-radius: var(--radius); background: #fdf3f0; border: 1px solid #f0c9bd; }

@@ -62,20 +62,42 @@ const mailto = email ? `mailto:${email}?subject=${encodeURIComponent("Scan enqui
 
 // A floor plan being scanned: the mark of the business, drawn rather than
 // photographed so the page looks finished before there is any work to show.
-// js/main.js brings it to life: the logo's eye goes room to room, sends out
-// dotted lines of sight, and each room's walls build in as it's scanned.
-// Each room's walls are revealed by a circle growing from the eye, clipped
-// to that room (with a little extra, so the walls on its edges come too).
-// Without JavaScript, or with reduced motion, the plan is simply complete.
-// Rooms are listed in the order the eye visits them.
+// js/main.js brings it to life: the logo's eye comes in through the front
+// opening, goes room to room through the doorways, sends out dotted lines of
+// sight, and each room's walls build in as it's scanned. Then it moves in:
+// furniture, measurements, TV, dinner, dancing, and finally bed, where it
+// stays. Each room's walls are revealed by a circle growing from the eye,
+// clipped to that room (with a little extra, so the walls on its edges come
+// too). Without JavaScript, or with reduced motion, it's simply the finished,
+// furnished plan.
+//
+// Rooms are listed in the order the eye scans them; doors join two rooms
+// (by index) at a point on the wall between them.
 const PLAN_ROOMS = [
-  { x: 20, y: 20, w: 180, h: 180 },
-  { x: 200, y: 20, w: 130, h: 180 },
-  { x: 330, y: 20, w: 130, h: 180 },
-  { x: 300, y: 200, w: 160, h: 140 },
-  { x: 20, y: 200, w: 280, h: 140 },
+  { x: 200, y: 20, w: 130, h: 180 }, // bathroom, entered from outside at the top
+  { x: 20, y: 20, w: 180, h: 180 }, // bedroom
+  { x: 20, y: 200, w: 280, h: 140 }, // living room
+  { x: 300, y: 200, w: 160, h: 140 }, // dining
+  { x: 330, y: 20, w: 130, h: 180 }, // kitchen
 ];
-const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focusable="false" data-plan data-rooms='${JSON.stringify(PLAN_ROOMS)}'>
+const PLAN_DOORS = [
+  [0, 1, 200, 125],
+  [1, 2, 105, 200],
+  [2, 3, 300, 275],
+  [3, 4, 345, 200],
+];
+// Furniture, as simple outlines. Hidden while the eye is still to place it.
+const PLAN_ITEMS = {
+  counter: '<rect x="424" y="32" width="26" height="150" rx="2"/>',
+  stove: '<rect x="424" y="80" width="26" height="42" rx="2"/><circle cx="437" cy="92" r="5"/><circle cx="437" cy="110" r="5"/>',
+  table: '<circle cx="390" cy="285" r="24"/><rect x="383" y="250" width="14" height="8" rx="2"/><rect x="383" y="312" width="14" height="8" rx="2"/>',
+  tv: '<rect x="150" y="208" width="80" height="10" rx="2"/><rect class="plan-screen" x="153" y="210" width="74" height="6" rx="1"/>',
+  sofa: '<rect x="70" y="300" width="120" height="26" rx="6"/><path d="M76 312 H184"/><rect x="62" y="296" width="12" height="32" rx="4"/><rect x="186" y="296" width="12" height="32" rx="4"/>',
+  speaker: '<rect x="34" y="214" width="20" height="28" rx="3"/><circle cx="44" cy="233" r="5"/><circle cx="44" cy="221" r="2"/>',
+  bed: '<rect x="36" y="36" width="84" height="110" rx="4"/><rect x="44" y="44" width="30" height="16" rx="3"/><rect x="82" y="44" width="30" height="16" rx="3"/><path d="M36 72 H120"/>',
+  tub: '<rect x="214" y="40" width="40" height="92" rx="14"/><circle cx="234" cy="120" r="3"/>',
+};
+const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focusable="false" data-plan data-rooms='${JSON.stringify(PLAN_ROOMS)}' data-doors='${JSON.stringify(PLAN_DOORS)}'>
   <defs>
     ${PLAN_ROOMS.map((r, i) => `<clipPath id="plan-room-${i}"><rect x="${r.x - 4}" y="${r.y - 4}" width="${r.w + 8}" height="${r.h + 8}"/></clipPath>`).join("\n    ")}
     <mask id="plan-built" maskUnits="userSpaceOnUse" x="-10" y="-10" width="500" height="380">
@@ -87,8 +109,13 @@ const planSvg = `<svg class="plan" viewBox="0 0 480 360" aria-hidden="true" focu
     <path d="M200 20 V110 M200 140 V200 M20 200 H90 M120 200 H300 V260 M300 290 V340 M300 200 H330 V20"/>
     <path d="M360 200 H460"/>
   </g>
+  <g class="plan-items">
+    ${Object.entries(PLAN_ITEMS).map(([name, d]) => `<g class="plan-item" data-item="${name}">${d}</g>`).join("\n    ")}
+  </g>
+  <g class="plan-marks"></g>
   <g class="plan-rays"></g>
-  <g class="plan-eye" transform="translate(380 270)">
+  <g class="plan-fx"></g>
+  <g class="plan-eye" transform="translate(78 100) scale(1 0.15)">
     <circle class="plan-eye-ball" r="10"/>
     <circle class="plan-eye-pupil" r="3.6"/>
   </g>

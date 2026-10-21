@@ -284,6 +284,126 @@ const character = (svg, { roam } = {}) => {
   const GAP = { mid: 290, leftWall: 265, rightWall: 315 };
   const OUTSIDE = { i: -268, l: 845 };
 
+  // ---- The yard: props on the ground, when there's room to roam ----
+  // A crate on the left, a bench on the right, and a ball, in the drawing's
+  // units, placed once the eye first starts and the screen's width is known.
+  // Positions are the x range of each footprint; the eye's x offset is also
+  // its left edge, so it overlaps something when x + 310 > x0 and x < x1.
+  const FLOOR = 1752, BALL_R = 110;
+  let props = [], ball = null;
+  const SVGNS = "http://www.w3.org/2000/svg";
+  const draw = (tag, attrs, parent) => {
+    const el = document.createElementNS(SVGNS, tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    parent.append(el);
+    return el;
+  };
+  const setUpYard = () => {
+    const { left, right } = roam();
+    const layer = draw("g", { class: "ilv-yard" }, svg);
+    svg.insertBefore(layer, svg.querySelector("g"));
+    // Each side's stretch of ground, kept clear of where the eye lands when
+    // it hops down off a letter.
+    const zones = {
+      [-1]: [left, OUTSIDE.i - 120],
+      [1]: [OUTSIDE.l + 310 + 120, right + 310],
+    };
+    const along = ([a, b], f) => a + (b - a) * f;
+    const room = (side) => zones[side][1] - zones[side][0];
+    if (room(-1) > 1500) {
+      const x0 = along(zones[-1], 0.4), top = FLOOR - 300;
+      props.push({ x0, x1: x0 + 300, top });
+      const g = draw("g", { class: "ilv-prop" }, layer);
+      draw("rect", { x: x0, y: top, width: 300, height: 300, rx: 14 }, g);
+      draw("path", { d: `M${x0 + 30} ${top + 30} L${x0 + 270} ${FLOOR - 30} M${x0 + 270} ${top + 30} L${x0 + 30} ${FLOOR - 30}` }, g);
+    }
+    if (room(1) > 1800) {
+      const x0 = along(zones[1], 0.5), top = FLOOR - 190;
+      props.push({ x0, x1: x0 + 620, top });
+      const g = draw("g", { class: "ilv-prop" }, layer);
+      draw("rect", { x: x0, y: top, width: 620, height: 56, rx: 18 }, g);
+      draw("path", { d: `M${x0 + 70} ${top + 56} V${FLOOR} M${x0 + 550} ${top + 56} V${FLOOR}` }, g);
+    }
+    // The ball goes on the roomier side, between the letters and its prop.
+    const side = room(1) >= room(-1) ? 1 : -1;
+    if (room(side) > 1100) {
+      const [a, b] = zones[side];
+      const bx = side > 0 ? a + Math.min(700, (b - a) * 0.25) : b - Math.min(700, (b - a) * 0.25);
+      const g = draw("g", { class: "ilv-ball" }, layer);
+      draw("circle", { cx: bx, cy: FLOOR - BALL_R, r: BALL_R }, g);
+      draw("path", { d: `M${bx - BALL_R} ${FLOOR - BALL_R} Q${bx} ${FLOOR - BALL_R - 70} ${bx + BALL_R} ${FLOOR - BALL_R} M${bx} ${FLOOR - 2 * BALL_R} Q${bx + 60} ${FLOOR - BALL_R} ${bx} ${FLOOR}` }, g);
+      ball = { el: g, x: bx, x0: bx, spin: 0, side, zone: zones[side] };
+    }
+  };
+
+  const propAt = (x) => props.find((p) => x + 310 > p.x0 && x < p.x1);
+  const onTopOf = (p) => p.top - 155 - 158;
+  const onGround = () => cy >= GROUND - 5;
+  const hitsBall = (x) => ball && x + 310 > ball.x - BALL_R && x < ball.x + BALL_R;
+
+  // Rolling the ball: away it goes, spinning, until it nears the edge of
+  // its stretch of ground or meets a prop.
+  const roll = async (dir, distance) => {
+    const [a, b] = ball.zone;
+    let to = ball.x + dir * distance;
+    to = Math.max(a + BALL_R + 450, Math.min(b - BALL_R - 450, to));
+    for (const p of props) {
+      if (dir > 0 && p.x0 >= ball.x + BALL_R) to = Math.min(to, p.x0 - BALL_R);
+      if (dir < 0 && p.x1 <= ball.x - BALL_R) to = Math.max(to, p.x1 + BALL_R);
+    }
+    const moved = to - ball.x;
+    if (Math.abs(moved) < 40) return false;
+    const spin = ball.spin + (moved / BALL_R) * (180 / Math.PI);
+    await play(ball.el, [
+      { transform: `translateX(${ball.x - ball.x0}px) rotate(${ball.spin}deg)` },
+      { transform: `translateX(${to - ball.x0}px) rotate(${spin}deg)` },
+    ], { duration: 450 + Math.abs(moved) * 0.6, easing: "cubic-bezier(0.15, 0.7, 0.3, 1)" });
+    ball.x = to;
+    ball.spin = spin;
+    return true;
+  };
+  // A kick: a lunge at the ball as it rolls off.
+  const kick = (dir, distance = rand(700, 1300)) => {
+    fromBase();
+    return Promise.all([
+      play(dot, [{ transform: "none" }, { transform: `translateX(${dir * 50}px) scale(1.16, 0.86)`, offset: 0.35 }, { transform: "none" }], { duration: 360, easing: "ease-out" }),
+      sleep(110).then(() => roll(dir, distance)),
+    ]);
+  };
+  // Over the ball, landing on the ground or a prop beyond it.
+  const hopOver = async (dir) => {
+    const x = dir > 0 ? ball.x + BALL_R + 20 : ball.x - BALL_R - 310 - 20;
+    const p = propAt(x);
+    await leap(x, p ? onTopOf(p) : GROUND, { rise: 230, ms: 620, crouch: true });
+  };
+
+  // Moving along the ground to x: up onto a prop in the way, along its top,
+  // down off the far end, and the ball knocked ahead or hopped over. Steps
+  // never overshoot x.
+  const moveTo = async (x, ms = 230, length = 260) => {
+    for (let guard = 0; guard < 300 && Math.abs(x - cx) > 2; guard++) {
+      const dir = Math.sign(x - cx);
+      let next = cx + dir * Math.min(length, Math.abs(x - cx));
+      const standingOn = onGround() ? null : propAt(cx);
+      const ahead = propAt(next);
+      if (!standingOn && ahead) {
+        next = Math.max(ahead.x0 - 60, Math.min(ahead.x1 - 250, next));
+        await leap(next, onTopOf(ahead), { rise: 140, ms: 460, crouch: false });
+        continue;
+      }
+      if (standingOn && !(next + 155 > standingOn.x0 && next + 155 < standingOn.x1)) {
+        next = dir > 0 ? Math.max(next, standingOn.x1 + 10) : Math.min(next, standingOn.x0 - 320);
+        await leap(next, GROUND, { rise: 100, ms: 480, crouch: false });
+        continue;
+      }
+      if (onGround() && hitsBall(next)) {
+        if (!(await kick(dir, rand(500, 900)))[1]) await hopOver(dir);
+        continue;
+      }
+      await stride(next, ms);
+    }
+  };
+
   const ADVENTURES = {
     // Over the edge of the l: a peek, a climb down the far side, a fright,
     // and a scramble back up.
@@ -355,12 +475,11 @@ const character = (svg, { roam } = {}) => {
         const edge = roam ? (side < 0 ? roam().left : roam().right) : start + side * 650;
         const span = Math.max(0, Math.abs(edge - start)) * (roam ? rand(0.6, 0.95) : 1);
         const length = roam ? 260 : 130;
-        const strides = Math.max(1, Math.floor(span / length));
-        for (let n = 1; n <= strides; n++) await stride(start + side * length * n);
+        await moveTo(start + side * span, 230, length);
         await sleep(300);
         await lookTo(-side * REACH, 0, 250);
         await sleep(500);
-        for (let n = strides - 1; n >= 0; n--) await stride(start + side * length * n);
+        await moveTo(start, 230, length);
         await lookTo(0, -REACH, 400);
         await sleep(300);
         await leap(PERCH[home].x, PERCH[home].y, { rise: 180, ms: 950, across: "late", arrive: onto(home) });
@@ -369,6 +488,46 @@ const character = (svg, { roam } = {}) => {
         await eyeClose();
       },
     },
+    // With a ball in the yard: down to it, a couple of kicks and a chase, a
+    // hop over it, a kick back, a little celebration, and home.
+    kickball: {
+      when: () => !!ball,
+      run: async () => {
+        const side = ball.side, perch = side < 0 ? "i" : "l";
+        if (on !== perch) await jump();
+        await eyeOpen();
+        await lookTo(side * REACH, 45, 400);
+        await leap(OUTSIDE[perch], GROUND, { rise: 120, ms: 820, across: "early" });
+        // Standing just short of the ball, on the side away from `dir`.
+        const behind = (dir) => (dir > 0 ? ball.x - BALL_R - 310 - 6 : ball.x + BALL_R + 6);
+        for (let k = 0; k < 2; k++) {
+          await lookTo(side * REACH, 10, 250);
+          await moveTo(behind(side), 230);
+          await sleep(rand(200, 500));
+          await kick(side);
+          await sleep(200);
+        }
+        await moveTo(behind(side), 230);
+        await lookTo(side * REACH, -REACH, 300);
+        await hopOver(side);
+        await lookTo(-side * REACH, 10, 300);
+        await sleep(400);
+        await kick(-side, rand(500, 900));
+        await sleep(300);
+        // Goal!
+        await play(pupil, [{ transform: pupil.style.transform || "none" }, { transform: look(0, -14, " scale(1.4)") }], { duration: 250 });
+        for (let n = 0; n < 2; n++) await leap(cx, cy, { rise: 160, ms: 420, crouch: n === 0 });
+        await play(pupil, [{ transform: look(0, -14, " scale(1.4)") }, { transform: "none" }], { duration: 250 });
+        await moveTo(OUTSIDE[perch], 230);
+        await lookTo(0, -REACH, 400);
+        await leap(PERCH[perch].x, PERCH[perch].y, { rise: 180, ms: 950, across: "late", arrive: onto(perch) });
+        on = perch;
+        await lookTo(0, 0, 400);
+        await sleep(250);
+        await eyeClose();
+      },
+    },
+
     // With room to roam only: down to the ground, nearly to one edge of the
     // screen, all the way across to the other, then home.
     crossing: {
@@ -377,11 +536,7 @@ const character = (svg, { roam } = {}) => {
         const home = on, side = on === "i" ? -1 : 1, start = OUTSIDE[home], length = 300;
         const { left, right } = roam();
         const near = side < 0 ? left : right, far = side < 0 ? right : left;
-        // Whole strides only, rounded down, so it never overshoots an edge.
-        const runTo = async (x, ms) => {
-          const n = Math.floor(Math.abs(x - cx) / length), dir = Math.sign(x - cx);
-          for (let k = 0; k < n; k++) await stride(cx + dir * length, ms);
-        };
+        const runTo = (x, ms) => moveTo(x, ms, length);
         await eyeOpen();
         await lookTo(side * REACH, 45, 400);
         await leap(start, GROUND, { rise: 120, ms: 820, across: "early" });
@@ -395,7 +550,6 @@ const character = (svg, { roam } = {}) => {
         await lookTo(side * REACH, 0, 250);
         await sleep(400);
         await runTo(start, 210);
-        await stride(start, 210);
         await lookTo(0, -REACH, 400);
         await sleep(250);
         await leap(PERCH[home].x, PERCH[home].y, { rise: 180, ms: 950, across: "late", arrive: onto(home) });
@@ -408,7 +562,7 @@ const character = (svg, { roam } = {}) => {
   let lastAdventure = "";
   const adventure = () => {
     // With room to roam, the ground adventures come up twice as often.
-    const pool = [...Object.keys(ADVENTURES), ...(roam ? ["groundRun", "crossing"] : [])];
+    const pool = [...Object.keys(ADVENTURES), ...(roam ? ["groundRun", "crossing", "kickball"] : [])];
     const names = pool.filter((n) => n !== lastAdventure && ADVENTURES[n].when());
     if (!names.length) return jump();
     lastAdventure = names[Math.floor(Math.random() * names.length)];
@@ -570,6 +724,7 @@ const character = (svg, { roam } = {}) => {
       on = "i";
       cx = PERCH.i.x;
       cy = PERCH.i.y;
+      if (roam && !props.length && !ball) setUpYard();
       running = true;
       // Never quite still: a gentle float on its own layer, under every
       // mood, pause and jump. A small tall oval traced at an even pace, so
@@ -863,12 +1018,15 @@ if (builder) {
   form.addEventListener("submit", (e) => e.preventDefault());
 }
 
-// ---------- hero: the eye scans and builds the floor plan ----------
-// The plan starts empty. The eye glides into each room, glances along
-// dotted lines of sight to its corners and walls, and the room's walls
-// build in, spreading out from the eye. With every room done it holds the
-// finished plan, blinks, clears it and starts over. Desktop only: phones
-// don't show the drawing. With reduced motion the plan stays complete.
+// ---------- hero: the eye scans, builds, then lives in the floor plan ----------
+// The plan starts empty. The eye comes in through the front opening and goes
+// room to room, only ever through doorways. In each room it glances along
+// dotted lines of sight to the corners and walls, and the room's walls build
+// in, spreading out from the eye. Then it moves in: furnishes the place,
+// measures two walls, watches TV, makes dinner, eats it, dances, and goes to
+// bed, where it stays asleep. Once through, about two minutes, never
+// repeated. Desktop only: phones don't show the drawing. With reduced motion
+// (or without JavaScript) the plan is shown finished, furnished, eye asleep.
 const plan = document.querySelector("[data-plan]");
 if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
   const NS = "http://www.w3.org/2000/svg";
@@ -884,85 +1042,275 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     // Big enough to reach the room's far corners, walls included.
     reach: Math.hypot(r.w, r.h) / 2 + 8,
   }));
+  const doors = JSON.parse(plan.dataset.doors);
   const walls = plan.querySelector(".plan-walls");
   const rays = plan.querySelector(".plan-rays");
+  const marks = plan.querySelector(".plan-marks");
+  const fx = plan.querySelector(".plan-fx");
   const eye = plan.querySelector(".plan-eye");
   const pupil = plan.querySelector(".plan-eye-pupil");
   const reveals = [...plan.querySelectorAll(".plan-reveal")];
+  const item = (name) => plan.querySelector(`[data-item="${name}"]`);
 
   const smooth = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const linear = (t) => t;
   const tween = (ms, fn, ease = smooth) =>
     new Promise((done) => {
       const t0 = performance.now();
       const frame = (now) => {
         const t = Math.min(1, (now - t0) / ms);
-        fn(ease(t));
+        fn(ease(t), t);
         t < 1 ? requestAnimationFrame(frame) : done();
       };
       requestAnimationFrame(frame);
     });
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const shape = (tag, attrs, parent = fx, text = "") => {
+    const el = document.createElementNS(NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+    if (text) el.textContent = text;
+    parent.append(el);
+    return el;
+  };
 
-  let ex = rooms[0].cx, ey = rooms[0].cy, squint = 1;
-  const place = () => eye.setAttribute("transform", `translate(${ex} ${ey}) scale(1 ${squint})`);
+  // The eye: where it is, how squinted, and a bob layered on top for
+  // dancing and nodding along.
+  let ex = 315, ey = -24, squint = 1, bobX = 0, bobY = 0;
+  const place = () => eye.setAttribute("transform", `translate(${(ex + bobX).toFixed(2)} ${(ey + bobY).toFixed(2)}) scale(1 ${squint.toFixed(3)})`);
   // The pupil leans towards what it's looking at, never past the eye's rim.
   const lookAt = (x, y) => {
     const dx = x - ex, dy = y - ey, d = Math.hypot(dx, dy) || 1, k = Math.min(5.2, d) / d;
     pupil.setAttribute("cx", (dx * k).toFixed(2));
     pupil.setAttribute("cy", (dy * k).toFixed(2));
   };
+  const lookAhead = () => { pupil.setAttribute("cx", 0); pupil.setAttribute("cy", 0); };
 
-  const glide = async (room) => {
-    const fx = ex, fy = ey;
-    lookAt(room.cx, room.cy);
-    await tween(Math.max(500, Math.hypot(room.cx - fx, room.cy - fy) * 5), (t) => {
-      ex = fx + (room.cx - fx) * t;
-      ey = fy + (room.cy - fy) * t;
+  // Which room a point is in, and the doors from one room to another.
+  let here = -1; // outside
+  const roomAt = (x, y) => rooms.findIndex((r) => x > r.x && x < r.x + r.w && y > r.y && y < r.y + r.h);
+  const route = (from, to) => {
+    if (from === to || from < 0) return [];
+    const prev = { [from]: null }, queue = [from];
+    while (queue.length) {
+      const r = queue.shift();
+      if (r === to) break;
+      for (const [a, b, x, y] of doors) {
+        const next = a === r ? b : b === r ? a : null;
+        if (next !== null && !(next in prev)) { prev[next] = { r, x, y }; queue.push(next); }
+      }
+    }
+    const points = [];
+    for (let r = to; prev[r]; r = prev[r].r) points.unshift([prev[r].x, prev[r].y]);
+    return points;
+  };
+
+  // Gliding in a straight line, looking where it's going.
+  const glide = async (x, y) => {
+    const fx0 = ex, fy0 = ey;
+    lookAt(x, y);
+    await tween(Math.max(300, Math.hypot(x - fx0, y - fy0) * 8), (t) => {
+      ex = fx0 + (x - fx0) * t;
+      ey = fy0 + (y - fy0) * t;
       place();
     });
   };
+  // Walking anywhere: through each doorway on the way, never a wall.
+  const walkTo = async (x, y) => {
+    const to = roomAt(x, y);
+    for (const [dx, dy] of route(here, to)) await glide(dx, dy);
+    await glide(x, y);
+    here = to;
+    lookAhead();
+  };
 
   const scan = async (room, i) => {
-    // A line of sight to each corner and wall, one after another.
     for (const [x, y] of room.sights) {
-      const line = document.createElementNS(NS, "line");
-      line.setAttribute("class", "plan-ray");
-      line.setAttribute("x1", ex);
-      line.setAttribute("y1", ey);
-      rays.append(line);
+      const line = shape("line", { class: "plan-ray", x1: ex, y1: ey, x2: ex, y2: ey }, rays);
       lookAt(x, y);
       await tween(170, (t) => {
         line.setAttribute("x2", ex + (x - ex) * t);
         line.setAttribute("y2", ey + (y - ey) * t);
       });
     }
-    lookAt(ex, ey);
-    // The room builds in, spreading from the eye; the sight lines fade.
+    lookAhead();
     await tween(900, (t) => reveals[i].setAttribute("r", (room.reach * t).toFixed(1)));
     await tween(350, (t) => (rays.style.opacity = 1 - t));
     rays.replaceChildren();
     rays.style.opacity = 1;
   };
 
-  const blink = () => tween(320, (t) => { squint = 1 - 0.85 * Math.sin(Math.PI * t); place(); }, (t) => t);
+  const blink = (ms = 320) => tween(ms, (t) => { squint = 1 - 0.85 * Math.sin(Math.PI * t); place(); }, linear);
+  // Setting something down: a little squash as it pops into place.
+  const setDown = async (name) => {
+    const el = item(name), box = el.getBBox(), cx = box.x + box.width / 2, cy = box.y + box.height / 2;
+    lookAt(cx, cy);
+    await tween(160, (t) => { squint = 1 - 0.25 * t; place(); });
+    el.style.opacity = 1;
+    const pop = (t) => 1 + 0.25 * Math.sin(Math.PI * t) * (1 - t);
+    await Promise.all([
+      tween(420, (t) => el.setAttribute("transform", `translate(${cx} ${cy}) scale(${(t * pop(t)).toFixed(3)}) translate(${-cx} ${-cy})`), linear),
+      tween(240, (t) => { squint = 0.75 + 0.25 * t; place(); }),
+    ]);
+    el.removeAttribute("transform");
+    lookAhead();
+  };
+
+  // A dimension line drawn along a wall as the eye walks it.
+  const measure = async ([x1, y1], [x2, y2], label, [lx, ly]) => {
+    await walkTo(x1, y1);
+    const vertical = x1 === x2;
+    const tick = (x, y) => shape("path", { class: "plan-mark", d: vertical ? `M${x - 5} ${y} H${x + 5}` : `M${x} ${y - 5} V${y + 5}` }, marks);
+    tick(x1, y1);
+    const line = shape("line", { class: "plan-mark", x1, y1, x2: x1, y2: y1 }, marks);
+    lookAt(x2, y2);
+    const fx0 = ex, fy0 = ey;
+    await tween(Math.hypot(x2 - x1, y2 - y1) * 11, (t) => {
+      ex = fx0 + (x2 - fx0) * t;
+      ey = fy0 + (y2 - fy0) * t;
+      line.setAttribute("x2", x1 + (x2 - x1) * t);
+      line.setAttribute("y2", y1 + (y2 - y1) * t);
+      place();
+    }, linear);
+    tick(x2, y2);
+    const text = shape("text", { class: "plan-label", x: lx, y: ly, "text-anchor": "middle", opacity: 0 }, marks, label);
+    await tween(300, (t) => text.setAttribute("opacity", t));
+    lookAhead();
+  };
+
+  // Things that float up and fade: music notes, steam, z's.
+  const drift = (el, dy, ms, sway = 0) => {
+    const x0 = +el.getAttribute("x") || 0;
+    return tween(ms, (t, raw) => {
+      el.setAttribute("transform", `translate(${(sway * Math.sin(raw * Math.PI * 2)).toFixed(2)} ${(-dy * raw).toFixed(2)})`);
+      el.setAttribute("opacity", (raw < 0.2 ? raw / 0.2 : 1 - (raw - 0.2) / 0.8).toFixed(2));
+    }, linear).then(() => el.remove());
+  };
+
+  const watchTV = async () => {
+    await walkTo(130, 306);
+    const screen = item("tv").querySelector(".plan-screen");
+    lookAt(190, 213);
+    const colours = ["#cfe3e5", "#1d5c63", "#e8d9a8", "#9fc3c7", "#f0c9bd"];
+    const flicker = tween(10000, (t, raw) => {
+      screen.style.fill = colours[Math.floor(raw * 28) % colours.length];
+      // Every so often, a glance away and back.
+      raw > 0.45 && raw < 0.52 ? lookAt(60, 330) : lookAt(190, 213);
+    }, linear);
+    await flicker;
+    screen.style.fill = "";
+    await blink();
+  };
+
+  const makeDinner = async () => {
+    await walkTo(405, 101);
+    lookAt(437, 100);
+    const stir = tween(8500, (t, raw) => { bobX = 3 * Math.sin(raw * Math.PI * 16); bobY = 2 * Math.cos(raw * Math.PI * 16); place(); }, linear);
+    for (let n = 0; n < 9; n++) {
+      const puff = shape("path", { class: "plan-steam", d: `M${430 + (n % 3) * 6} 96 q 4 -6 0 -12 q -4 -6 0 -12` });
+      drift(puff, 26, 1600, 3);
+      await sleep(850);
+    }
+    await stir;
+    bobX = bobY = 0;
+    place();
+  };
+
+  const eatDinner = async () => {
+    await walkTo(348, 285);
+    const plate = shape("circle", { class: "plan-mark", cx: 376, cy: 285, r: 9 });
+    const food = [[373, 283], [379, 283], [376, 289]].map(([x, y]) => shape("circle", { class: "plan-food", cx: x, cy: y, r: 2.4 }));
+    lookAt(376, 285);
+    await sleep(500);
+    for (const bite of food) {
+      await tween(420, (t) => { bobX = 6 * Math.sin(Math.PI * t); place(); });
+      bite.remove();
+      await sleep(900);
+    }
+    await sleep(500);
+    await tween(300, (t) => plate.setAttribute("opacity", 1 - t));
+    plate.remove();
+    await blink();
+  };
+
+  const dance = async () => {
+    await walkTo(150, 262);
+    const notes = (async () => {
+      for (let n = 0; n < 12; n++) {
+        const note = shape("text", { class: "plan-note", x: 48 + (n % 2) * 8, y: 214 }, fx, n % 3 ? "♪" : "♫");
+        drift(note, 34, 1800, 5);
+        await sleep(700);
+      }
+    })();
+    await tween(9600, (t, raw) => {
+      const beat = raw * Math.PI * 2 * 12;
+      bobY = -Math.abs(9 * Math.sin(beat));
+      bobX = 10 * Math.sin(beat / 2);
+      squint = 1 - 0.12 * Math.abs(Math.cos(beat));
+      pupil.setAttribute("cx", (3.5 * Math.sin(beat / 2)).toFixed(2));
+      place();
+    }, linear);
+    await notes;
+    bobX = bobY = 0;
+    squint = 1;
+    lookAhead();
+    place();
+  };
+
+  // Last: bed. Its eye closes, a few z's, and there it stays.
+  const goToBed = async () => {
+    await walkTo(78, 100);
+    await sleep(400);
+    await tween(1400, (t) => { squint = 1 - 0.85 * t; place(); });
+    for (let n = 0; n < 4; n++) {
+      drift(shape("text", { class: "plan-z", x: 92 + n * 2, y: 92 }, fx, "z"), 30, 2200, 3);
+      await sleep(1300);
+    }
+  };
 
   const run = async () => {
+    plan.querySelectorAll(".plan-item").forEach((el) => (el.style.opacity = 0));
     walls.setAttribute("mask", "url(#plan-built)");
     place();
-    for (;;) {
-      for (let i = 0; i < rooms.length; i++) {
-        await glide(rooms[i]);
-        await sleep(200);
-        await scan(rooms[i], i);
-        await sleep(250);
-      }
-      // All built: a look round the finished plan, a blink, and clear.
-      await sleep(1200);
-      await blink();
-      await sleep(1600);
-      await tween(700, (t) => reveals.forEach((r, i) => r.setAttribute("r", (rooms[i].reach * (1 - t)).toFixed(1))));
-      await sleep(500);
+    lookAt(315, 60);
+    // In through the front opening, then each room in turn.
+    await sleep(400);
+    await glide(315, 22);
+    for (let i = 0; i < rooms.length; i++) {
+      await walkTo(rooms[i].cx, rooms[i].cy);
+      await sleep(200);
+      await scan(rooms[i], i);
+      await sleep(250);
     }
+    await sleep(900);
+    await blink();
+    await sleep(700);
+
+    // Moving in: furniture, room by room, from the kitchen round to the bath.
+    const furnish = [
+      ["counter", 400, 150], ["stove", 405, 101], ["table", 348, 285], ["tv", 190, 240],
+      ["sofa", 130, 280], ["speaker", 70, 228], ["bed", 150, 90], ["tub", 230, 160],
+    ];
+    for (const [name, x, y] of furnish) {
+      await walkTo(x, y);
+      await setDown(name);
+      await sleep(350);
+    }
+    // Measuring up.
+    await measure([182, 30], [182, 190], "15′", [168, 114]);
+    await sleep(400);
+    // Right to left, below the speaker, so the walk there stays clear of it.
+    await measure([290, 266], [30, 266], "23′", [160, 260]);
+    await sleep(600);
+    // Settling in.
+    await watchTV();
+    await sleep(500);
+    await makeDinner();
+    await sleep(500);
+    await eatDinner();
+    await sleep(500);
+    await dance();
+    await sleep(600);
+    await goToBed();
   };
 
   // Only once the drawing is actually on screen (desktop widths).
