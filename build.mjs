@@ -499,21 +499,29 @@ const plansList = plans.name
 // section borders apply. On phones the two sections before it (marketing
 // pricing and schematic plan pricing) are hidden, so it follows the builder
 // anyway.
+// On phones, the two kinds of pricing fold away under a dropdown each, so
+// Build your job (and, once there is some, the work) leads; each says
+// briefly what's inside.
+const fromPrice = (t) => num(t.flat) || num(t.min) || num(t.rate);
+const tierFrom = Math.min(...(site.tiers || []).map(fromPrice).filter(Boolean));
+const drop = (kick, heading, teaser, body, id = "") => `<details class="m-drop">
+          <summary>
+            <span class="m-drop-text">${kicker(kick)}<span class="m-heading"${id ? ` id="${id}"` : ""}>${heading}</span>${teaser ? `<span class="m-drop-teaser">${esc(teaser)}</span>` : ""}</span>
+            ${chevron}
+          </summary>
+          <div class="m-drop-body">
+          ${body}
+          </div>
+        </details>`;
 const packagesSection = `<section class="section m-only" id="packages" aria-labelledby="packages-heading">
       <div class="wrap">
-        <div class="m-group">
-          ${kicker(site.pricingKicker)}
-          <h2 id="packages-heading" class="m-heading">${pricingHeading}</h2>
-          <div class="svc-list">
+        ${drop(site.pricingKicker, pricingHeading,
+          (site.tiers || []).length ? `${site.tiers.length} packages, from ${money(tierFrom)}` : "",
+          `<div class="svc-list">
           ${tierRows.join("\n          ")}
           </div>
-          ${site.pricingNote ? `<p class="fine">${esc(site.pricingNote)}</p>` : ""}
-        </div>
-        ${plansList ? `<div class="m-group">
-          ${kicker(plans.kicker)}
-          <h2 class="m-heading">${esc(plans.heading || PLANS_PACKAGE)}</h2>
-          ${plansList}
-        </div>` : ""}
+          ${site.pricingNote ? `<p class="fine">${esc(site.pricingNote)}</p>` : ""}`, "packages-heading")}
+        ${plansList ? drop(plans.kicker, esc(plans.heading || PLANS_PACKAGE), num(plans.min) ? `From ${money(num(plans.min))}` : "", plansList) : ""}
       </div>
     </section>`;
 
