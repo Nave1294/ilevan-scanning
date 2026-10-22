@@ -322,7 +322,7 @@ const character = (svg, { roam } = {}) => {
   };
 
   const setUpYard = () => {
-    const { left, right } = roam();
+    const { left, right, runs } = roam();
     const letters = svg.querySelector(":scope > g");
     const layer = () => svg.insertBefore(draw("g", { class: "ilv-yard" }, svg), letters);
     // Behind the balls, the balls (and the fish), and in front of them.
@@ -359,7 +359,8 @@ const character = (svg, { roam } = {}) => {
       draw("path", { d: `M${x0 + 30} ${top + 30} L${x0 + 270} ${FLOOR - 30} M${x0 + 270} ${top + 30} L${x0 + 30} ${FLOOR - 30}` }, g);
     }
     if (hoop && room > 1420) {
-      const rx = 300, x = (props.length ? props[0].x0 - 300 : spot - 60) - rx;
+      // Out at the far end, given room; otherwise as near as it fits.
+      const rx = 300, x = Math.min(L[0] + rx + 100, (props.length ? props[0].x0 - 300 : spot - 60) - rx);
       const g = draw("g", { class: "ilv-ice" }, yard.back);
       draw("ellipse", { cx: x, cy: FLOOR, rx, ry: 42 }, g);
       draw("path", { class: "ilv-crack", d: `M${x - 230} ${FLOOR - 6} l60 10 l40 -8 M${x + 140} ${FLOOR + 14} l50 -10 l40 6` }, g);
@@ -418,7 +419,12 @@ const character = (svg, { roam } = {}) => {
         [R[0] + 150, pins ? pins.start - 340 : R[1] - 450]);
       ball.kick = true;
     }
-    walk = { left: ice ? Math.max(left, ice.x1 + 40) : left, right: pins ? Math.min(right, pins.start) : right };
+    // Runs stop short of the ice and the lane, and of `runs` if given, so
+    // only fishing and bowling go out to the yard's far ends.
+    walk = {
+      left: Math.max(ice ? ice.x1 + 40 : left, runs?.left ?? -Infinity),
+      right: Math.min(pins ? pins.start : right, runs?.right ?? Infinity),
+    };
   };
 
   const propAt = (x) => props.find((p) => x + 310 > p.x0 && x < p.x1);
@@ -2301,10 +2307,11 @@ const mascot = document.querySelector(".mascot .loader");
 if (mascot && "IntersectionObserver" in window) {
   // The yard, in the drawing's units, the same whatever the screen: the
   // logo is drawn so its dot is the size the eye is everywhere else, and
-  // the yard spans about six logos across, so on a phone held upright the
-  // far ends run a little past the screen's edges. The eye's offsets run
-  // from 0 (its left edge at x 0) to these, 310 across.
-  const YARD = { left: -3228, right: 3803 };
+  // the yard spans about ten logos across, so on a phone held upright its
+  // far ends (the ice, the bowling pins) are just off the screen's edges
+  // and come into view turned sideways. Runs keep nearer in. The eye's
+  // offsets run from 0 (its left edge at x 0) to these, 310 across.
+  const YARD = { left: -4900, right: 5480, runs: { left: -2400, right: 2700 } };
   const roam = () => YARD;
   const life = character(mascot, { roam });
   new IntersectionObserver((entries, seen) => {
