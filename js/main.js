@@ -1248,7 +1248,7 @@ if (booking) {
   addons.forEach((a) => (a.checked = wantedAddons.includes(a.dataset.name)));
   if (tour) tour.checked = params.get("tour") === "1";
   if (changes && Number(params.get("changes")) > 0) changes.value = Number(params.get("changes"));
-  const kinds = { home: "Home", commercial: "Commercial or mixed-use" };
+  const kinds = { home: "Home", commercial: "Commercial or mixed-use", long: "Long-term rental", short: "Short-term rental" };
   if (kind && kinds[params.get("kind")]) kind.value = kinds[params.get("kind")];
 
   const update = () => {
@@ -1404,6 +1404,16 @@ if (builder) {
         why: `A schematic plan of every level as it stands${extras.length ? `, with ${listJoin(extras)}` : ""}.`,
       };
     }
+    if (purpose === "rental" && val("rental") === "short")
+      return val("stay") === "yes"
+        ? { pkg: "Pro", why: "A marketing plan for your Airbnb or Vrbo photos, and a branded tour for your own booking site and social." }
+        : { pkg: "Plan only", why: "A marketing plan to add to your Airbnb or Vrbo listing photos, so guests see the layout before they book." };
+    if (purpose === "rental")
+      return {
+        zillow: { pkg: "Basic", why: "A Zillow tour and Zillow plan show on your Zillow rental listing, free to host, and work again each time the unit turns over." },
+        own: { pkg: "Pro", why: "A branded tour and marketing plan for your own site and every rental listing, reused each time the unit turns over." },
+        both: { pkg: "Complete", why: "The Zillow tour and Zillow plan for Zillow Rentals, and the branded tour and marketing plan for everywhere else, reused at every turnover." },
+      }[val("where")];
     if (val("kind") === "commercial")
       return { pkg: "Pro", why: "Zillow is for homes, so a branded tour is the way to show commercial space, with a marketing plan." };
     return {
@@ -1416,10 +1426,13 @@ if (builder) {
   const update = () => {
     const purpose = val("purpose");
     show("listing", purpose === "listing");
-    show("home", purpose === "listing" && val("kind") === "home");
+    show("rental", purpose === "rental");
+    show("home", (purpose === "listing" && val("kind") === "home") || (purpose === "rental" && val("rental") === "long"));
+    show("short", purpose === "rental" && val("rental") === "short");
     show("plans", purpose === "plans");
     const answered =
       purpose === "plans" ? !pricing.plans.tourHosting || !!val("tour")
+      : purpose === "rental" ? (val("rental") === "long" && !!val("where")) || (val("rental") === "short" && !!val("stay"))
       : purpose === "listing" && (val("kind") === "commercial" || (val("kind") === "home" && !!val("where")));
     show("size", answered);
     // A second size, for the proposed changes, only when an add-on priced
@@ -1477,6 +1490,7 @@ if (builder) {
     if (rec.tour) link.set("tour", "1");
     if (needsChanges) link.set("changes", String(changes));
     if (purpose === "listing" && val("kind")) link.set("kind", val("kind"));
+    if (purpose === "rental" && val("rental")) link.set("kind", val("rental"));
     const book = result.querySelector("[data-builder-book]");
     book.href = `book.html?${link}`;
     book.textContent = `Book ${rec.pkg}`;

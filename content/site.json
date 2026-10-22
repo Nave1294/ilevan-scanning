@@ -3,9 +3,9 @@
   "siteUrl": "https://nave1294.github.io/ilevan-scanning/",
   "eyebrow": "Residential & commercial",
   "tagline": "3D tours and schematic plans.",
-  "intro": "3D tours and marketing plans for listings, and schematic plans for renovations and additions. Every marketing plan and schematic plan is drafted by a Drexel-trained architectural designer.",
+  "intro": "3D tours and marketing plans for listings and rentals, and schematic plans for renovations and additions. Every marketing plan and schematic plan is drafted by a Drexel-trained architectural designer.",
   "ctaLabel": "Book a scan",
-  "pricingKicker": "For listings",
+  "pricingKicker": "For listings and rentals",
   "pricingHeading": "Marketing pricing",
   "tiers": [
     {
@@ -24,6 +24,22 @@
         "Zillow plan"
       ],
       "short": "Zillow 3D tour + Zillow plan"
+    },
+    {
+      "name": "Plan only",
+      "includes": "Custom-drafted marketing plan, no tour. For rental, Airbnb and Vrbo listings",
+      "flat": 0,
+      "flatUpTo": 0,
+      "overRate": 0,
+      "rate": 0.1,
+      "min": 159,
+      "hosting": 0,
+      "hostingNote": "No tour, so no hosting",
+      "featured": false,
+      "deliverables": [
+        "Marketing plan"
+      ],
+      "short": "Marketing plan, no tour"
     },
     {
       "name": "Pro",

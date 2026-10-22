@@ -374,7 +374,13 @@ const builderSection = `<section class="section section-alt" id="builder" aria-l
           <fieldset class="q">
             <legend>What's the scan for?</legend>
             ${choice("purpose", "listing", "Marketing a listing")}
+            ${choice("purpose", "rental", "Renting it out")}
             ${plans.name ? choice("purpose", "plans", "A renovation or addition") : ""}
+          </fieldset>
+          <fieldset class="q" data-show="rental" hidden>
+            <legend>What kind of rental?</legend>
+            ${choice("rental", "long", "Long-term, to tenants")}
+            ${choice("rental", "short", "Short-term, like Airbnb or Vrbo")}
           </fieldset>
           <fieldset class="q" data-show="listing" hidden>
             <legend>What kind of property?</legend>
@@ -386,6 +392,11 @@ const builderSection = `<section class="section section-alt" id="builder" aria-l
             ${choice("where", "zillow", "On Zillow")}
             ${choice("where", "own", "My website, social and email")}
             ${choice("where", "both", "Both")}
+          </fieldset>
+          <fieldset class="q" data-show="short" hidden>
+            <legend>Want a tour for your own booking site and social too? <span class="hint">Airbnb and Vrbo listings are built around photos, so the marketing plan goes in with yours either way.</span></legend>
+            ${choice("stay", "yes", "Yes, a branded tour too")}
+            ${choice("stay", "no", "No, just the marketing plan")}
           </fieldset>
           <fieldset class="q" data-show="plans" hidden>
             <legend>Add to the schematic plan? <span class="hint">A schematic plan of every level is included. Pick any extras, or none.</span></legend>
@@ -727,6 +738,8 @@ const book = page({
                 <option value="">Choose one</option>
                 <option value="Home">Home</option>
                 <option value="Commercial or mixed-use">Commercial or mixed-use</option>
+                <option value="Long-term rental">Long-term rental</option>
+                <option value="Short-term rental">Short-term rental (Airbnb, Vrbo)</option>
               </select>`)}
             ${field("sqft", `Square footage of the building ${req}`, `<input id="sqft" name="Square footage" type="number" inputmode="numeric" min="100" step="1" required data-book-sqft>`)}
             <div class="field" hidden data-changes-field>
