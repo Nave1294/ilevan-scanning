@@ -2229,6 +2229,11 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     }
   };
 
+  // Empty from the start, so a phone scrolling down to it never sees the
+  // finished plan vanish.
+  plan.querySelectorAll(".plan-item").forEach((el) => (el.style.opacity = 0));
+  walls.setAttribute("mask", "url(#plan-built)");
+
   const run = async () => {
     // In through the front door, then each room in turn.
     await sleep(400);
@@ -2251,7 +2256,7 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await sleep(400);
     await measure([345, 32], [345, 188], "15′", [359, 114]);
     await sleep(400);
-    await measure([450, 330], [310, 330], "13′", [340, 323]);
+    await measure([450, 322], [310, 322], "13′", [340, 315]);
     await sleep(400);
     await measure([290, 266], [30, 266], "23′", [160, 260]);
     await sleep(700);
