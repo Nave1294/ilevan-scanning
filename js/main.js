@@ -1490,7 +1490,8 @@ if (builder) {
 // The header's eye floats and blinks by itself (css/style.css). Here it also
 // takes notice: now and then its pupil follows the cursor, always when the
 // cursor comes near, and when something is pressed it hops and looks at it.
-// And when Build your job comes into view, it flies down to help: it sits
+// And when the cursor rests over Build your job for a second and a half (on
+// a touch screen, at the first answer), it flies down to help: it sits
 // beside each question in turn and hops as each is answered. When a
 // suggestion comes, it pulls the card on from the edge of the screen, then
 // waits by the Book button for half a minute before flying home to the
@@ -1605,9 +1606,16 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
   // before flying home. Anything changed meanwhile starts it over.
   let turn = 0, lastInput = 0, inspected = false, inView = false;
   const unhold = () => (result.style.translate = "");
-  const present = async () => {
+  const present = async (invited = false) => {
     const me = ++turn, stale = () => me !== turn;
     inspected = false;
+    // With a mouse, the eye only helps once invited (see below); until
+    // then the card comes in by itself.
+    if (fine && !out && invited !== true) {
+      result.classList.add("is-revealing");
+      inspected = true;
+      return;
+    }
     // Off screen (say, answers restored on reload), or while the eye is
     // busy in the floor plan or the footer, it waits.
     if (!inView || elsewhere) return;
@@ -1637,7 +1645,11 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
     if (stale()) return;
     hop(guide, 4);
     await wait(300);
-    // Over to the Book button, to watch it and wait, a while, for a press.
+    await watchBook(stale);
+  };
+  // Over to the Book button, to watch it and wait, a while, for a press,
+  // then home.
+  const watchBook = async (stale) => {
     const book = result.querySelector("[data-builder-book]");
     await flyTo(() => { const r = book.getBoundingClientRect(); return [Math.min(r.right + 18, innerWidth - 14), r.top + r.height / 2]; });
     if (stale()) return;
@@ -1656,21 +1668,25 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
     await flyTo(null);
   };
 
-  // Out to the question in hand, or to show a suggestion not yet shown.
+  // Out to the question in hand, to show a suggestion not yet shown, or
+  // to the Book button of one already shown.
   const goOut = () => {
     if (elsewhere) return;
-    if (!result.hidden && !inspected) { present(); return; }
+    if (!result.hidden && !inspected) { present(true); return; }
     const q = current();
-    if (!q) return;
+    if (!q && result.hidden) return;
     leave();
-    flyTo(q);
+    if (q) flyTo(q);
+    else { const me = ++turn; watchBook(() => me !== turn); }
   };
   const goHome = () => { if (out && target !== null) { turn++; unhold(); flyTo(null); } };
   // A beat after each answer, on to whatever comes next.
   let next = 0;
   const onward = (picked) => {
     if (!inView || elsewhere) return;
-    if (!out) leave();
+    // With a mouse it waits to be invited; on a touch screen the first
+    // answer brings it out.
+    if (!out) { if (fine) return; leave(); }
     glance = picked ? centre(picked) : null;
     aim(guide, glance);
     hop(guide, 5);
@@ -1709,17 +1725,26 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
       elsewhere = now;
       brandEye.classList.toggle("is-away", elsewhere);
       if (elsewhere && out) vanish();
-      else if (!elsewhere && inView) goOut();
     }, { threshold: [0, 0.3] });
     others.forEach((el) => io.observe(el));
   }
   if (form && "IntersectionObserver" in window) {
     result.dataset.guided = "1";
     result.addEventListener("suggest", present);
+    // Scrolling the builder away sends it home; scrolling to it doesn't
+    // bring it out. A mouse resting over the builder for a second and a
+    // half does.
     new IntersectionObserver(([e]) => {
       inView = e.intersectionRatio > 0.25;
-      inView ? goOut() : goHome();
+      if (!inView) goHome();
     }, { threshold: [0, 0.25] }).observe(builder);
+    let dwell = 0;
+    builder.addEventListener("pointerenter", (e) => {
+      if (e.pointerType !== "mouse") return;
+      clearTimeout(dwell);
+      dwell = setTimeout(() => { if (inView && !out) goOut(); }, 1500);
+    });
+    builder.addEventListener("pointerleave", () => clearTimeout(dwell));
     form.addEventListener("change", (e) => onward(e.target.closest("label") || e.target));
     // Typing a size: it watches, and moves on once the typing stops.
     form.addEventListener("input", (e) => {
