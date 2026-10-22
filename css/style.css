@@ -502,6 +502,11 @@ body:has(.thanks) { animation: page-in 0.6s ease both; }
   .section-head h2, .m-heading, .contact h2 { font-size: 26px; }
   .m-heading { margin-bottom: 16px; }
   .kicker { font-size: 12px; margin-bottom: 8px; }
+  /* The work, once there is some, straight after Build your job and ahead
+     of the pricing. */
+  main#top { display: flex; flex-direction: column; }
+  main#top > .hero, #builder, #work { order: -1; }
+  .section-alt + #work + #contact { border-top: 0; }
   /* Pricing folded away: a dropdown each, closed to start. */
   #packages .wrap { display: grid; gap: 12px; }
   .m-drop { border: 1px solid var(--border); border-radius: 14px; background: var(--bg); }
