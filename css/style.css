@@ -13,6 +13,8 @@
 
   --font: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --wrap: 1120px;
+  /* The eye's size wherever it appears: the header, the guide, the footer. */
+  --eye: 20px;
   --gutter: clamp(16px, 4vw, 40px);
   --radius: 10px;
 }
@@ -55,7 +57,7 @@ a { color: inherit; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; text-decoration: none; white-space: nowrap; }
 /* The header's mark: the logo's eye, floating a little, blinking now and
    then, and glancing about. */
-.brand-eye { display: block; width: 20px; height: 20px; overflow: visible; animation: brand-float 3.2s ease-in-out infinite; }
+.brand-eye { display: block; width: var(--eye); height: var(--eye); overflow: visible; animation: brand-float 3.2s ease-in-out infinite; }
 .brand-eye .brand-ball { fill: var(--text); transform-box: fill-box; transform-origin: 50% 50%; animation: brand-blink 6.5s infinite; }
 .brand-eye .brand-pupil { fill: var(--bg); animation: brand-glance 13s ease-in-out infinite; }
 @keyframes brand-float { 50% { transform: translateY(-2.5px); } }
@@ -77,7 +79,7 @@ a { color: inherit; }
 .brand-eye.is-watching .brand-pupil { animation: none; transition: transform 0.15s ease-out; }
 /* Out helping with Build your job: the same eye, a little bigger, over the
    page. */
-.guide-eye { position: fixed; left: 0; top: 0; z-index: 20; width: 22px; height: 22px; pointer-events: none; display: none; }
+.guide-eye { position: fixed; left: 0; top: 0; z-index: 20; width: var(--eye); height: var(--eye); pointer-events: none; display: none; }
 .guide-eye.is-out { display: block; }
 @media (prefers-reduced-motion: reduce) { .brand-eye, .brand-eye *, .guide-eye { animation: none !important; } }
 .brand-mark {
@@ -359,6 +361,8 @@ nav a:hover { color: var(--text); }
 
 /* ---------- job builder ---------- */
 #builder[hidden] { display: none; }
+/* The suggestion is pulled on from beyond the screen's edge; no sideways scroll meanwhile. */
+#builder { overflow-x: clip; }
 .builder { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px clamp(24px, 5vw, 64px); align-items: start; }
 .builder .section-head { grid-column: 1 / -1; margin-bottom: 8px; }
 .builder-form { display: grid; gap: 28px; }
@@ -403,7 +407,8 @@ nav a:hover { color: var(--text); }
    little room below for the ice, which lies just under the ground line. */
 .mascot { overflow: hidden; padding: 48px 0 10px; border-top: 1px solid var(--border); }
 .mascot .wrap { display: grid; justify-items: center; }
-.mascot .loader { width: clamp(110px, 12vw, 150px); height: auto; overflow: visible; }
+/* Drawn so its dot, 310 of the drawing's 1105 across, is the eye's size. */
+.mascot .loader { width: calc(var(--eye) * 1105 / 310); height: auto; overflow: visible; }
 /* The yard, in light grey so the logo stays the thing, with a few touches
    of colour: the balls, the rim, the water and the fish. */
 .mascot .ilv-prop rect, .mascot .ilv-prop path, .mascot .ilv-board { fill: #fff; stroke: #c4c4c4; stroke-width: 24; stroke-linejoin: round; stroke-linecap: round; }
@@ -483,7 +488,9 @@ body:has(.thanks) { animation: page-in 0.6s ease both; }
 .m-only { display: none; }
 
 @media (max-width: 820px) {
-  :root { --gutter: 20px; }
+  /* The floor plan is drawn smaller on phones, its eye about 15px across,
+     so the eye is that size everywhere else too. */
+  :root { --gutter: 20px; --eye: 15px; }
   .m-only { display: block; }
   /* The package list stands in for these three. */
   #pricing, #plans { display: none; }

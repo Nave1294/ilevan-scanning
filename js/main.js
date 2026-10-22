@@ -1486,9 +1486,9 @@ if (builder) {
 // cursor comes near, and when something is pressed it hops and looks at it.
 // And when Build your job comes into view, it flies down to help: it sits
 // beside each question in turn and hops as each is answered. When a
-// suggestion comes, it pulls the card in, brings up each section of it and
-// looks it over, ending at the Book button, and flies home to the header,
-// as it does when the builder is scrolled away. The header's eye is never
+// suggestion comes, it pulls the card on from the edge of the screen, then
+// waits by the Book button for half a minute before flying home to the
+// header, as it does when the builder is scrolled away. The header's eye is never
 // shown while the floor plan's or the footer's is on screen: it's the same
 // eye.
 const brandEye = document.querySelector(".site-header .brand-eye");
@@ -1568,7 +1568,8 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
         }
       } else { x = tx; y = ty; }
       // Placed with `translate`, leaving `transform` to its float and hops.
-      guide.style.translate = `${(x - 11).toFixed(1)}px ${(y - 11).toFixed(1)}px`;
+      const half = parseFloat(getComputedStyle(guide).width) / 2;
+      guide.style.translate = `${(x - half).toFixed(1)}px ${(y - half).toFixed(1)}px`;
       if (out || flight) requestAnimationFrame(frame);
       else running = false;
     };
@@ -1592,73 +1593,59 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
     requestAnimationFrame(step);
   });
 
-  // The suggestion, shown by the eye: held back until it arrives, pulled
-  // in from the side (or unfolded downward on phones), each section brought
-  // up and looked over in turn, ending at the Book button, and home. Anything changed meanwhile starts it over.
+  // The suggestion, shown by the eye: held just off the edge of the screen
+  // until the eye arrives, pulled on whole, and then the eye hops over to
+  // the Book button and watches it, waiting half a minute for a press
+  // before flying home. Anything changed meanwhile starts it over.
   let turn = 0, lastInput = 0, inspected = false, inView = false;
-  // The card's sections, each one or more elements: the package, why, the
-  // breakdown, the note under it (when there is one) and the Book button.
-  const sections = () =>
-    [[".compare-tag", "[data-builder-name]"], ["[data-builder-why]"], ["[data-builder-breakdown]"], ["[data-builder-estimate]"], ["[data-builder-book]"]]
-      .map((sels) => sels.map((sel) => result.querySelector(sel)))
-      .filter((els) => els.every((el) => el && !el.hidden));
-  const hide = (on) => sections().flat().forEach((el) => (el.style.opacity = on ? 0 : ""));
-  const unhold = () => {
-    result.style.opacity = result.style.translate = result.style.clipPath = "";
-    hide(false);
-  };
+  const unhold = () => (result.style.translate = "");
   const present = async () => {
     const me = ++turn, stale = () => me !== turn;
     inspected = false;
     // Off screen (say, answers restored on reload), or while the eye is
     // busy in the floor plan or the footer, it waits.
     if (!inView || elsewhere) return;
-    const phone = !matchMedia("(min-width: 821px)").matches;
-    const held = (k) => {
-      result.style.opacity = Math.min(1, k * 3).toFixed(2);
-      if (phone) result.style.clipPath = `inset(0 0 ${((1 - k) * 100).toFixed(1)}% 0 round 14px)`;
-      else result.style.translate = `${((1 - k) * 80).toFixed(1)}px 0`;
+    // Held just past the screen's right-hand edge, whole and ready.
+    let off = 0;
+    const held = () => {
+      const r = result.getBoundingClientRect();
+      off = innerWidth - (r.left - parseFloat(result.style.translate || 0)) + 24;
+      result.style.translate = `${off.toFixed(1)}px 0`;
     };
-    held(0);
-    hide(true);
+    held();
     // Wait for typing to stop (this runs before the keystroke that set it
     // off is counted, so count it here).
     lastInput = performance.now();
     while (performance.now() - lastInput < 700) { await wait(100); if (stale()) return; }
-    hide(true);
+    held();
     leave();
-    let k = 0;
-    const edge = () => { const r = result.getBoundingClientRect(); return phone ? [r.right - 34, r.top + r.height * k] : [r.left - 4, r.top + 30]; };
-    // Bring the card into view if it's below the fold (phones, mostly).
+    // Bring the card's place into view if it's below the fold (phones,
+    // mostly), fly to the screen's edge beside it, and pull it on.
     result.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    await flyTo(edge);
+    let shift = off;
+    const grip = () => { const r = result.getBoundingClientRect(); return [Math.min(r.left - 4, innerWidth - 14), r.top + 30]; };
+    await flyTo(grip);
     if (stale()) return;
-    await tween(800, (e) => { k = e; held(e); });
+    await tween(750, (e) => { shift = off * (1 - e); result.style.translate = `${shift.toFixed(1)}px 0`; });
+    result.style.translate = "";
     if (stale()) return;
-    result.style.opacity = result.style.translate = result.style.clipPath = "";
-    await wait(250);
-    // Section by section: over beside it, it comes up, and the eye reads
-    // across it, nods, and moves on; a bigger hop at the Book button.
-    const all = sections();
-    for (const [i, els] of all.entries()) {
-      const box = () => {
-        const rs = els.map((el) => el.getBoundingClientRect());
-        return { left: Math.min(...rs.map((r) => r.left)), right: Math.max(...rs.map((r) => r.right)), top: Math.min(...rs.map((r) => r.top)), bottom: Math.max(...rs.map((r) => r.bottom)) };
-      };
-      await flyTo(() => { const r = box(); return [Math.min(r.right + 18, innerWidth - 14), (r.top + r.bottom) / 2]; });
+    hop(guide, 4);
+    await wait(300);
+    // Over to the Book button, to watch it and wait, a while, for a press.
+    const book = result.querySelector("[data-builder-book]");
+    await flyTo(() => { const r = book.getBoundingClientRect(); return [Math.min(r.right + 18, innerWidth - 14), r.top + r.height / 2]; });
+    if (stale()) return;
+    glance = centre(book);
+    aim(guide, glance);
+    hop(guide, 6);
+    for (let t = 0; t < 30000; t += 250) {
+      await wait(250);
       if (stale()) return;
-      els.forEach((el) => { el.animate([{ opacity: 0, transform: "translateX(12px)" }, { opacity: 1, transform: "none" }], { duration: 380, easing: "ease-out" }); el.style.opacity = ""; });
-      const last = i === all.length - 1;
-      await tween(last ? 500 : 900, (e) => {
-        const r = box(), mid = (r.top + r.bottom) / 2;
-        glance = [r.left + (r.right - r.left) * e, last ? mid : r.top + (r.bottom - r.top) * (0.25 + 0.5 * e)];
-        aim(guide, glance);
-      });
-      hop(guide, last ? 7 : 3);
-      await wait(last ? 900 : 300);
-      glance = null;
-      if (stale()) return;
+      glance = centre(book);
+      aim(guide, glance);
+      if (t % 6000 === 5750) hop(guide, 3);
     }
+    glance = null;
     inspected = true;
     await flyTo(null);
   };
@@ -1685,7 +1672,7 @@ if (brandEye && brandEye.animate && !matchMedia("(prefers-reduced-motion: reduce
     next = setTimeout(() => {
       glance = null;
       // A fresh suggestion takes it from here.
-      if (!result.hidden && result.style.opacity !== "") return;
+      if (!result.hidden && result.style.translate) return;
       const to = current();
       if (to) { if (to !== target) flyTo(to); }
       else if (result.hidden || inspected) flyTo(null);
@@ -2309,30 +2296,16 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
 // there. It starts out too scared to leave the letters, works up the
 // courage to climb down, and from then on plays in the yard (basketball,
 // football, bowling, ice fishing) between moods, leaps and runs along the
-// ground, within the page's text column, or past a phone's edges. It starts
-// when scrolled into view.
+// ground, in a yard a few logos wide. It starts when scrolled into view.
 const mascot = document.querySelector(".mascot .loader");
 if (mascot && "IntersectionObserver" in window) {
-  const VIEW = mascot.viewBox.baseVal;
-  // The yard a desktop column holds, in the drawing's units.
+  // The yard, in the drawing's units, the same whatever the screen: the
+  // logo is drawn so its dot is the size the eye is everywhere else, and
+  // the yard spans about six logos across, so on a phone held upright the
+  // far ends run a little past the screen's edges. The eye's offsets run
+  // from 0 (its left edge at x 0) to these, 310 across.
   const YARD = { left: -3228, right: 3803 };
-  // An offset of 0 puts the dot's left edge at x 0 and its right edge at
-  // 310 (it's 310 across). Between these it stays 160 units inside the
-  // column's edges, room for its squash and float.
-  const roam = () => {
-    const box = mascot.getBoundingClientRect();
-    const perPx = VIEW.width / box.width;
-    // The text column: the strip's .wrap, inside its side padding.
-    const column = mascot.closest(".wrap");
-    const style = getComputedStyle(column), col = column.getBoundingClientRect();
-    const from = col.left + parseFloat(style.paddingLeft), to = col.right - parseFloat(style.paddingRight);
-    const leftEdge = VIEW.x + (from - box.left) * perPx;
-    const rightEdge = VIEW.x + (to - box.left) * perPx;
-    // Never less than a desktop column's worth of yard: on a phone held
-    // upright the far ends run off the screen's edges, and turned sideways
-    // the rest comes into view.
-    return { left: Math.min(leftEdge + 160, YARD.left), right: Math.max(rightEdge - 310 - 160, YARD.right) };
-  };
+  const roam = () => YARD;
   const life = character(mascot, { roam });
   new IntersectionObserver((entries, seen) => {
     if (entries.some((e) => e.isIntersecting)) {
