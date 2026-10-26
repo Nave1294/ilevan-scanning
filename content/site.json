@@ -158,5 +158,9 @@
   "about": "Every marketing plan and schematic plan is drafted by a Drexel-trained architectural designer, not generated automatically from the scan.",
   "area": "Serving Philadelphia and nearby.",
   "email": "evanthalheimer@gmail.com",
-  "phone": "215-431-0955"
+  "phone": "215-431-0955",
+  "smallJob": {
+    "under": 800,
+    "percent": 25
+  }
 }

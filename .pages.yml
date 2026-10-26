@@ -116,6 +116,13 @@ content:
           - { name: deliverables, label: Deliverables, type: string, list: true, description: 'Listed in the booking form and the booking email, e.g. "Zillow 3D tour", "Zillow plan".' }
           - { name: featured, label: Highlight this tier, type: boolean }
       - { name: pricingNote, label: Note under pricing, type: text }
+      - name: smallJob
+        label: Small-space discount
+        type: object
+        description: "A percentage off for jobs under a size (building square footage), on everything but monthly hosting. Set either to 0 to turn it off."
+        fields:
+          - { name: under, label: Under (sq ft), type: number }
+          - { name: percent, label: Discount (%), type: number }
       - name: compare
         label: Tour comparison
         type: object

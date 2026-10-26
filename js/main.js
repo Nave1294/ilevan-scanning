@@ -30,7 +30,7 @@ const pricing = (() => {
 })();
 // "a", "a and b", "a, b and c".
 const listJoin = (xs) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`);
-const money = (n) => "$" + (Math.round(n * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
+const money = (n) => (n < 0 ? "−$" : "$") + (Math.round(Math.abs(n) * 100) / 100).toLocaleString("en-US", { maximumFractionDigits: 2 });
 const isPlans = (pkg) => !!pricing.plans && pkg === pricing.plans.name;
 
 // A package at a size, with schematic add-ons and the optional tour, as
@@ -82,6 +82,12 @@ const quote = ({ pkg, sqft, changes = 0, addons = [], tour = false }) => {
     }
     hosting = t.hosting;
   }
+
+  // Small spaces: a percentage off the job, never off hosting.
+  const sm = pricing.small || {};
+  const job = lines.reduce((sum, l) => sum + l.amount, 0);
+  if (sm.under && sm.off && sqft > 0 && sqft < sm.under && job > 0)
+    lines.push({ label: "Small-space discount", detail: `${Math.round(sm.off * 100)}% off, under ${sqftText(sm.under)}`, amount: -Math.round(job * sm.off * 100) / 100 });
 
   // The first invoice includes the first month of hosting.
   if (hosting) lines.push({ label: "Tour hosting, first month", detail: "", amount: hosting });

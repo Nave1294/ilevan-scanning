@@ -293,6 +293,13 @@ const compareBlock = compareOptions
 const kicker = (text) => (text ? `<p class="eyebrow kicker">${esc(text)}</p>` : "");
 const pricingHeading = esc(site.pricingHeading || "Pricing");
 
+// Small spaces: a percentage off everything but hosting, for jobs under a
+// size. Set in the dashboard; 0 or blank turns it off.
+const small = { under: num(site.smallJob?.under), off: num(site.smallJob?.percent) / 100 };
+const smallNote = small.under && small.off
+  ? `Under ${small.under.toLocaleString("en-US")} sq ft? ${Math.round(small.off * 100)}% off, applied to everything but monthly hosting.`
+  : "";
+
 // Schematic plans: a base drawing set plus optional add-ons. Each is priced
 // flat, per square foot (with a minimum), or left at 0 to read "Quoted".
 const plans = site.plans || {};
@@ -330,6 +337,7 @@ const plansSection = plans.name
           ${plansCard(plans, { tag: "Included", featured: true })}
           ${(plans.addons || []).map((a) => plansCard(a, { tag: "Add-on", addon: true })).join("\n          ")}
         </div>
+        ${smallNote ? `<p class="pricing-note">${esc(smallNote)}</p>` : ""}
         ${plans.note ? `<p class="pricing-note">${esc(plans.note)}</p>` : ""}
         <p><a class="button" href="book.html?package=${encodeURIComponent(PLANS_PACKAGE)}">Book schematic plans</a></p>
       </div>
@@ -341,6 +349,7 @@ const plansSection = plans.name
 // of them can quote differently. "<" is escaped so content can't close the
 // script tag early.
 const pricing = {
+  small,
   tiers: (site.tiers || []).map((t) => ({
     name: String(t.name || ""), flat: num(t.flat), upTo: num(t.flatUpTo), over: num(t.overRate),
     rate: num(t.rate), min: num(t.min), hosting: num(t.hosting),
@@ -504,6 +513,7 @@ const plansList = plans.name
           <ul class="svc-addons">${rows
             .map(([n, pr, under], i) => `<li${i ? "" : ' class="plan-base"'}><span>${esc(n)}${i ? "" : `<small>Included</small>`}</span><span class="svc-addon-price">${esc(pr)}${under ? `<small>${esc(under)}</small>` : ""}</span></li>`)
             .join("")}</ul>
+          ${smallNote ? `<p class="fine">${esc(smallNote)}</p>` : ""}
           ${plans.note ? `<p class="fine">${esc(plans.note)}</p>` : ""}
           ${svcBook(PLANS_PACKAGE, "Book schematic plans")}
         </div>`;
@@ -536,6 +546,7 @@ const packagesSection = `<section class="section m-only" id="packages" aria-labe
           `<div class="svc-list">
           ${tierRows.join("\n          ")}
           </div>
+          ${smallNote ? `<p class="fine">${esc(smallNote)}</p>` : ""}
           ${site.pricingNote ? `<p class="fine">${esc(site.pricingNote)}</p>` : ""}`, "packages-heading")}
         ${plansList ? drop(plans.kicker, esc(plans.heading || PLANS_PACKAGE), num(plans.min) ? `From ${money(num(plans.min))}` : "", plansList) : ""}
       </div>
@@ -640,6 +651,7 @@ const home = page({
         <ul class="tiers">
       ${tiers}
         </ul>
+        ${smallNote ? `<p class="pricing-note">${esc(smallNote)}</p>` : ""}
         ${site.pricingNote ? `<p class="pricing-note">${esc(site.pricingNote)}</p>` : ""}
 
         ${compareBlock}
