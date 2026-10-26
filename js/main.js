@@ -1390,6 +1390,10 @@ if (builder) {
   // Which package answers the questions, and why, in one line.
   const recommend = () => {
     const purpose = val("purpose");
+    // As-found: the schematic plans of every level as it stands, and
+    // nothing else; no extras, no virtual tour.
+    if (purpose === "plans" && val("need") === "asfound")
+      return { pkg: pricing.plans.name, addons: [], tour: false, changes: 0, why: "As-found schematic plans of every level, drawn from the scan, with no virtual tour." };
     if (purpose === "plans") {
       const addons = [...form.querySelectorAll("[data-builder-addon]:checked")].map((x) => x.value);
       const changes = Number(form.querySelector("[data-builder-changes]")?.value) || 0;
@@ -1430,14 +1434,15 @@ if (builder) {
     show("home", (purpose === "listing" && val("kind") === "home") || (purpose === "rental" && val("rental") === "long"));
     show("short", purpose === "rental" && val("rental") === "short");
     show("plans", purpose === "plans");
+    show("design", purpose === "plans" && val("need") === "design");
     const answered =
-      purpose === "plans" ? !pricing.plans.tourHosting || !!val("tour")
+      purpose === "plans" ? val("need") === "asfound" || (val("need") === "design" && (!pricing.plans.tourHosting || !!val("tour")))
       : purpose === "rental" ? (val("rental") === "long" && !!val("where")) || (val("rental") === "short" && !!val("stay"))
       : purpose === "listing" && (val("kind") === "commercial" || (val("kind") === "home" && !!val("where")));
     show("size", answered);
     // A second size, for the proposed changes, only when an add-on priced
     // on it is ticked; the result waits until it's filled in.
-    const needsChanges = purpose === "plans" && !!form.querySelector("[data-builder-addon][data-per-changes]:checked");
+    const needsChanges = purpose === "plans" && val("need") === "design" && !!form.querySelector("[data-builder-addon][data-per-changes]:checked");
     show("changes", answered && needsChanges);
     const changes = Number(form.querySelector("[data-builder-changes]")?.value) || 0;
 

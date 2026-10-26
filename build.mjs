@@ -399,10 +399,15 @@ const builderSection = `<section class="section section-alt" id="builder" aria-l
             ${choice("stay", "no", "No, just the marketing plan")}
           </fieldset>
           <fieldset class="q" data-show="plans" hidden>
+            <legend>What do you need drawn?</legend>
+            ${choice("need", "asfound", "As-found plans of the building as it is")}
+            ${choice("need", "design", "Plans to design changes from")}
+          </fieldset>
+          <fieldset class="q" data-show="design" hidden>
             <legend>Add to the schematic plan? <span class="hint">A schematic plan of every level is included. Pick any extras, or none.</span></legend>
             ${(plans.addons || []).map(tick).join("\n            ")}
           </fieldset>
-          ${tourHosting ? `<fieldset class="q" data-show="plans" hidden>
+          ${tourHosting ? `<fieldset class="q" data-show="design" hidden>
             <legend>Keep a walkthrough of the property?</legend>
             ${choice("tour", "yes", `Yes, the branded Realsee tour (+${money(tourHosting)}/mo)`)}
             ${choice("tour", "no", "No, just the schematic plan")}
