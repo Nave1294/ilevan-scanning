@@ -54,6 +54,11 @@ a { color: inherit; }
   border-bottom: 1px solid var(--border);
 }
 .header-inner { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+.header-start { display: flex; align-items: center; gap: 12px; min-width: 0; }
+/* Back to the main site: a small round arrow before the name. */
+.back-link { display: grid; place-items: center; width: 32px; height: 32px; flex: none; margin-left: -6px; border-radius: 50%; color: var(--muted); text-decoration: none; transition: background 0.15s, color 0.15s; }
+.back-link:hover { background: var(--bg-alt); color: var(--text); }
+.back-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; font-weight: 650; text-decoration: none; white-space: nowrap; }
 /* The header's mark: the logo's eye, floating a little, blinking now and
    then, and glancing about. */

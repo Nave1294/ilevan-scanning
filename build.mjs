@@ -564,6 +564,9 @@ const siteUrl = String(site.siteUrl || "").trim().replace(/\/?$/, "/").replace(/
 // blinks and glances about (css/style.css).
 const brandEye = `<svg class="brand-eye" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><g class="brand-ball"><circle cx="10" cy="10" r="9"/><circle class="brand-pupil" cx="10" cy="9.4" r="2.7"/></g></svg>`;
 
+// On the home page, an arrow left of the name back to the main site.
+const backUrl = String(site.backUrl || "").trim();
+
 const page = ({ title, desc = description, home = false, path = "", body }) => {
   const at = home ? "" : "index.html";
   return `<!doctype html>
@@ -591,7 +594,10 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
 <body>
   <header class="site-header">
     <div class="wrap header-inner">
-      <a class="brand" href="${home ? "#top" : "index.html"}">${brandEye}${name}</a>
+      <div class="header-start">
+        ${home && backUrl ? `<a class="back-link" href="${esc(backUrl)}" aria-label="Back to Evan Thalheimer's main site" title="Evan Thalheimer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>` : ""}
+        <a class="brand" href="${home ? "#top" : "index.html"}">${brandEye}${name}</a>
+      </div>
       <nav aria-label="Main">
         <a href="${at}#pricing">${pricingHeading}</a>
         ${plansSection ? `<a href="${at}#plans">${esc(plans.heading || PLANS_PACKAGE)}</a>` : ""}
