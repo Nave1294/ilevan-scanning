@@ -2060,7 +2060,7 @@ if (plan && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
     await go([[me, 112, 306], [partner, 152, 306], [kidA, 112, 272], [kidB, 156, 272]]);
     const screen = item("tv").querySelector(".plan-screen");
     const everyone = [me, partner, kidA, kidB];
-    const colours = ["#cfe3e5", "#1d5c63", "#e8d9a8", "#9fc3c7", "#f0c9bd"];
+    const colours = ["#cfe3e5", "#9c4a26", "#e8d9a8", "#9fc3c7", "#f0c9bd"];
     await tween(11000, (t, raw) => {
       screen.style.fill = colours[Math.floor(raw * 30) % colours.length];
       everyone.forEach((e) => e.lookAt(190, 213));
