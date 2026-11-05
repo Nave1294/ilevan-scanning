@@ -91,7 +91,8 @@ content:
     fields:
       - { name: name, label: Business name, type: string }
       - { name: siteUrl, label: Site address, type: string, description: "The site's full address, ending in /. Used for link previews. Change it when a custom domain goes live." }
-      - { name: backUrl, label: Back arrow link, type: string, description: "Where the arrow left of the name on the home page goes, e.g. your main site. Leave blank to hide it." }
+      - { name: backUrl, label: Back link address, type: string, description: "Shows a small back link at the top of the home page, e.g. to your main site. Leave blank to hide it." }
+      - { name: backLabel, label: Back link text, type: string, description: 'What the back link says. Blank = "Back".' }
       - { name: eyebrow, label: Label above headline, type: string, description: 'A few words, e.g. "Residential & commercial". Leave blank to hide.' }
       - { name: tagline, label: Headline, type: string }
       - { name: intro, label: Intro, type: text }

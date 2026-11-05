@@ -564,8 +564,12 @@ const siteUrl = String(site.siteUrl || "").trim().replace(/\/?$/, "/").replace(/
 // blinks and glances about (css/style.css).
 const brandEye = `<svg class="brand-eye" viewBox="0 0 20 20" aria-hidden="true" focusable="false"><g class="brand-ball"><circle cx="10" cy="10" r="9"/><circle class="brand-pupil" cx="10" cy="9.4" r="2.7"/></g></svg>`;
 
-// On the home page, an arrow left of the name back to the main site.
+// At the top of the home page, a small link back to the main site, in the
+// same style as the portfolio's.
 const backUrl = String(site.backUrl || "").trim();
+const backLink = backUrl
+  ? `<a class="back-link" href="${esc(backUrl)}"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>${esc(site.backLabel || "Back")}</a>`
+  : "";
 
 const page = ({ title, desc = description, home = false, path = "", body }) => {
   const at = home ? "" : "index.html";
@@ -594,10 +598,7 @@ const page = ({ title, desc = description, home = false, path = "", body }) => {
 <body>
   <header class="site-header">
     <div class="wrap header-inner">
-      <div class="header-start">
-        ${home && backUrl ? `<a class="back-link" href="${esc(backUrl)}" aria-label="Back to Evan Thalheimer's main site" title="Evan Thalheimer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M11 18l-6-6 6-6"/></svg></a>` : ""}
-        <a class="brand" href="${home ? "#top" : "index.html"}">${brandEye}${name}</a>
-      </div>
+      <a class="brand" href="${home ? "#top" : "index.html"}">${brandEye}${name}</a>
       <nav aria-label="Main">
         <a href="${at}#pricing">${pricingHeading}</a>
         ${plansSection ? `<a href="${at}#plans">${esc(plans.heading || PLANS_PACKAGE)}</a>` : ""}
@@ -628,6 +629,7 @@ const home = page({
   title: name,
   home: true,
   body: `    <section class="hero">
+      ${backLink ? `<div class="wrap hero-back">${backLink}</div>` : ""}
       <div class="wrap hero-inner">
         <div class="hero-text">
           ${site.eyebrow ? `<p class="eyebrow">${esc(site.eyebrow)}</p>` : ""}
