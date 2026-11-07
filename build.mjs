@@ -143,8 +143,6 @@ const tierTerms = (t) => {
     hosting,
     amount: flat ? money(flat) : money(rate),
     unit: flat ? "flat" : "/sq ft",
-    // The least a job can cost, for "from $159" on phones.
-    from: flat ? money(flat) : money(min || rate),
     detail: flat
       ? [upTo ? `Up to ${sqft(upTo)}` : "", over ? `then ${money(over)}/sq ft` : ""].filter(Boolean).join(", ")
       : min ? `${money(min)} minimum` : "",
@@ -398,14 +396,14 @@ const builderSection = `<section class="section section-alt" id="builder" aria-l
           </fieldset>
           <fieldset class="q" data-show="home" hidden>
             <legend>Where will the tour be seen?</legend>
-            ${choice("where", "zillow", "On Zillow")}
-            ${choice("where", "own", "My website, social and email")}
+            ${choice("where", "zillow", "Zillow / Redfin")}
+            ${choice("where", "own", "My website / other")}
             ${choice("where", "both", "Both")}
           </fieldset>
           <fieldset class="q" data-show="short" hidden>
-            <legend>Want a tour for your own booking site and social too? <span class="hint">Airbnb and Vrbo listings are built around photos, so the marketing plan goes in with yours either way.</span></legend>
+            <legend>Want a tour for your own booking site and social too? <span class="hint">Airbnb and Vrbo listings are built around photos, so the marketing floor plan goes in with yours either way.</span></legend>
             ${choice("stay", "yes", "Yes, a branded tour too")}
-            ${choice("stay", "no", "No, just the marketing plan")}
+            ${choice("stay", "no", "No, just the marketing floor plan")}
           </fieldset>
           <fieldset class="q" data-show="plans" hidden>
             <legend>What do you need drawn?</legend>
@@ -460,10 +458,12 @@ const ledeHtml = (() => {
 // keeps. Native <details>, so it works without JavaScript; sharing a name
 // makes it an accordion where supported.
 const chevron = `<svg class="svc-chevron" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>`;
-const svcRow = ({ name, line, from, body }) => `<details class="svc" name="packages">
+// The price shows before a row is opened: the rate (or the flat price), and
+// under it the minimum (or "flat").
+const svcRow = ({ name, line, price, under, body }) => `<details class="svc" name="packages">
           <summary>
             <span class="svc-text"><span class="svc-name">${esc(name)}</span><span class="svc-line">${esc(line)}</span></span>
-            <span class="svc-price"><span class="svc-from">from</span>${esc(from)}</span>
+            <span class="svc-price">${esc(price)}${under ? `<span class="svc-under">${esc(under)}</span>` : ""}</span>
             ${chevron}
           </summary>
           <div class="svc-body">
@@ -482,7 +482,8 @@ const tierRows = (site.tiers || []).map((t) => {
   return svcRow({
     name: t.name,
     line: t.short || (t.deliverables || []).join(" + "),
-    from: terms.from,
+    price: terms.unit === "flat" ? terms.amount : `${terms.amount}/sq ft`,
+    under: terms.unit === "flat" ? "flat" : num(t.min) ? `${money(num(t.min))} min` : "",
     body: `<p class="svc-terms"><strong>${terms.amount}${terms.unit === "flat" ? " flat" : terms.unit}</strong>${
               [terms.detail, terms.host.replace(/^\+ /, "")].filter(Boolean).length
                 ? `<span>${esc([terms.detail, terms.host.replace(/^\+ /, "")].filter(Boolean).join(" · "))}</span>`

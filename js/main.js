@@ -1416,20 +1416,20 @@ if (builder) {
     }
     if (purpose === "rental" && val("rental") === "short")
       return val("stay") === "yes"
-        ? { pkg: "Pro", why: "A marketing plan for your Airbnb or Vrbo photos, and a branded tour for your own booking site and social." }
-        : { pkg: "Plan only", why: "A marketing plan to add to your Airbnb or Vrbo listing photos, so guests see the layout before they book." };
+        ? { pkg: "Pro", why: "A marketing floor plan for your Airbnb or Vrbo photos, and a branded tour for your own booking site and social." }
+        : { pkg: "Plan only", why: "A marketing floor plan to add to your Airbnb or Vrbo listing photos, so guests see the layout before they book." };
     if (purpose === "rental")
       return {
         zillow: { pkg: "Basic", why: "A Zillow tour and Zillow plan show on your Zillow rental listing, free to host, and work again each time the unit turns over." },
-        own: { pkg: "Pro", why: "A branded tour and marketing plan for your own site and every rental listing, reused each time the unit turns over." },
-        both: { pkg: "Complete", why: "The Zillow tour and Zillow plan for Zillow Rentals, and the branded tour and marketing plan for everywhere else, reused at every turnover." },
+        own: { pkg: "Pro", why: "A branded tour and marketing floor plan for your own site and every rental listing, reused each time the unit turns over." },
+        both: { pkg: "Complete", why: "The Zillow tour and Zillow plan for Zillow Rentals, and the branded tour and marketing floor plan for everywhere else, reused at every turnover." },
       }[val("where")];
     if (val("kind") === "commercial")
-      return { pkg: "Pro", why: "Zillow is for homes, so a branded tour is the way to show commercial space, with a marketing plan." };
+      return { pkg: "Pro", why: "Zillow is for homes, so a branded tour is the way to show commercial space, with a marketing floor plan." };
     return {
-      zillow: { pkg: "Basic", why: "A Zillow tour and Zillow plan are all a Zillow listing needs." },
-      own: { pkg: "Pro", why: "A branded tour to share on your own website, social and email, with a marketing plan." },
-      both: { pkg: "Complete", why: "The Zillow tour and Zillow plan for your Zillow listing, and the branded tour and marketing plan for everywhere else." },
+      zillow: { pkg: "Basic", why: "A Zillow tour and Zillow plan are all a Zillow or Redfin listing needs." },
+      own: { pkg: "Pro", why: "A branded tour for your own website, social, email and anywhere else, with a marketing floor plan." },
+      both: { pkg: "Complete", why: "The Zillow tour and Zillow plan for Zillow and Redfin, and the branded tour and marketing floor plan for everywhere else." },
     }[val("where")];
   };
 

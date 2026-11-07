@@ -3,7 +3,7 @@
   "siteUrl": "https://nave1294.github.io/ilevan-scanning/",
   "eyebrow": "Residential & commercial",
   "tagline": "3D tours and schematic plans.",
-  "intro": "3D tours and marketing plans for listings and rentals, and schematic plans for renovations and additions. Every marketing plan and schematic plan is drafted by a Drexel-trained architectural designer.",
+  "intro": "3D tours and marketing floor plans for listings and rentals, and schematic plans for renovations and additions. Every marketing floor plan and schematic plan is drafted by a Drexel-trained architectural designer.",
   "ctaLabel": "Book a scan",
   "pricingKicker": "For listings and rentals",
   "pricingHeading": "Marketing pricing",
@@ -27,7 +27,7 @@
     },
     {
       "name": "Plan only",
-      "includes": "Custom-drafted marketing plan, no tour. For rental, Airbnb and Vrbo listings",
+      "includes": "Custom-drafted marketing floor plan, no tour. For rental, Airbnb and Vrbo listings",
       "flat": 0,
       "flatUpTo": 0,
       "overRate": 0,
@@ -37,13 +37,13 @@
       "hostingNote": "No tour, so no hosting",
       "featured": false,
       "deliverables": [
-        "Marketing plan"
+        "Marketing floor plan"
       ],
-      "short": "Marketing plan, no tour"
+      "short": "Marketing floor plan, no tour"
     },
     {
       "name": "Pro",
-      "includes": "Branded Realsee LiDAR tour + custom-drafted marketing plan",
+      "includes": "Branded Realsee LiDAR tour + custom-drafted marketing floor plan",
       "flat": 0,
       "flatUpTo": 0,
       "overRate": 0,
@@ -54,13 +54,13 @@
       "featured": true,
       "deliverables": [
         "Branded Realsee tour",
-        "Marketing plan"
+        "Marketing floor plan"
       ],
-      "short": "Branded tour + marketing plan"
+      "short": "Branded tour + marketing floor plan"
     },
     {
       "name": "Complete",
-      "includes": "Everything in Basic and Pro: both tours, the Zillow plan and the marketing plan",
+      "includes": "Everything in Basic and Pro: both tours, the Zillow plan and the marketing floor plan",
       "flat": 0,
       "flatUpTo": 0,
       "overRate": 0,
@@ -73,12 +73,12 @@
         "Zillow 3D tour",
         "Zillow plan",
         "Branded Realsee tour",
-        "Marketing plan"
+        "Marketing floor plan"
       ],
       "short": "Both tours + both plans"
     }
   ],
-  "pricingNote": "The first invoice includes the first month of hosting. Zillow plans and marketing plans are approximate and for marketing purposes only.",
+  "pricingNote": "The first invoice includes the first month of hosting. Zillow plans and marketing floor plans are approximate and for marketing purposes only.",
   "compare": {
     "heading": "Zillow tour or branded tour?",
     "intro": "Both are walkable 3D tours. The difference is whose name is on them, and where they work best.",
@@ -101,7 +101,7 @@
           "Carries your branding, so the tour markets you wherever it's shared.",
           "Embed it on your own website, or send it by text, email and social with no Zillow page around it.",
           "Works for any property, from a rowhouse to commercial and mixed-use buildings.",
-          "Captured with a LiDAR scanner, which measures each room as it scans, and comes with a marketing plan drafted from it.",
+          "Captured with a LiDAR scanner, which measures each room as it scans, and comes with a marketing floor plan drafted from it.",
           "Stays live for as long as hosting continues."
         ],
         "featured": true
@@ -154,8 +154,8 @@
       "text": "Your tour link and your Zillow, marketing or schematic plan arrive by email."
     }
   ],
-  "workIntro": "Recent tours, marketing plans and schematic plans.",
-  "about": "Every marketing plan and schematic plan is drafted by a Drexel-trained architectural designer, not generated automatically from the scan.",
+  "workIntro": "Recent tours, marketing floor plans and schematic plans.",
+  "about": "Every marketing floor plan and schematic plan is drafted by a Drexel-trained architectural designer, not generated automatically from the scan.",
   "area": "Serving Philadelphia and nearby.",
   "email": "evanthalheimer@gmail.com",
   "phone": "215-431-0955",
